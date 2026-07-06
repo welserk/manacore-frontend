@@ -21,6 +21,11 @@ import { CatalogoTile } from '../core/modelos';
         @if (tile().imageUrl) {
           <img [src]="tile().imageUrl!" [alt]="tile().name" class="tile-imagen" loading="lazy">
         }
+        <!-- Efecto foil: velo tornasol animado sobre la imagen,
+             solo para acabados foil/etched (imita el reflejo real) -->
+        @if (esFoil()) {
+          <div class="brillo-foil"></div>
+        }
       </div>
       <div class="tile-info">
         <span class="tile-nombre">
@@ -52,12 +57,52 @@ import { CatalogoTile } from '../core/modelos';
     .tile-imagen-marco {
       aspect-ratio: 63 / 88;
       background: #1a1a20;
+      position: relative;   /* ancla del velo foil */
+      overflow: hidden;
     }
     .tile-imagen {
       width: 100%;
       height: 100%;
       object-fit: cover;
       display: block;
+    }
+    /* Velo tornasol sobre la imagen de las foil: un degradado
+       arcoiris intenso que se desplaza (como al inclinar la carta).
+       mix-blend-mode "overlay" lo funde con la imagen en vez de
+       taparla. pointer-events none = el clic pasa derecho al tile. */
+    .brillo-foil {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(115deg,
+        rgba(255, 70, 200, 0.6) 0%,
+        rgba(255, 210, 50, 0.5) 18%,
+        rgba(50, 255, 140, 0.5) 38%,
+        rgba(50, 160, 255, 0.6) 58%,
+        rgba(200, 70, 255, 0.6) 78%,
+        rgba(255, 70, 200, 0.6) 100%);
+      background-size: 250% 250%;
+      mix-blend-mode: overlay;
+      animation: foil-tornasol 4s linear infinite;
+    }
+    /* Destello diagonal que barre la carta solo, en bucle
+       (pausa un momento en cada extremo para no marear) */
+    .brillo-foil::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(115deg,
+        transparent 30%, rgba(255, 255, 255, 0.6) 50%, transparent 70%);
+      animation: foil-destello 4s ease-in-out infinite;
+    }
+    @keyframes foil-tornasol {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @keyframes foil-destello {
+      0%, 55%   { transform: translateX(-120%); }
+      85%, 100% { transform: translateX(120%); }
     }
     .tile-info {
       display: flex;
@@ -109,6 +154,9 @@ import { CatalogoTile } from '../core/modelos';
 export class TileCatalogo {
 
   tile = input.required<CatalogoTile>();
+
+  // Todo acabado distinto de "normal" lleva el velo tornasol
+  esFoil = computed(() => this.tile().finish !== 'normal');
 
   // Etiqueta a mostrar entre parentesis: el tipo de foil especial si existe,
   // o "foil"/"etched". Para "normal" no se muestra nada.

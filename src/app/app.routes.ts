@@ -42,6 +42,13 @@ export const routes: Routes = [
     title: 'Lo último — ManaCore TCG'
   },
 
+  // Compra por lista: pegar una lista de cartas y ver lo disponible
+  {
+    path: 'lista',
+    loadComponent: () => import('./pages/compra-lista/compra-lista').then(m => m.CompraLista),
+    title: 'Compra por lista — ManaCore TCG'
+  },
+
   // Las demas paginas (catalogo, tokens, vender, login, terminos...)
   // se agregan aqui a medida que las construyamos en las siguientes etapas
 

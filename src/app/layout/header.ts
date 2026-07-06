@@ -2,9 +2,12 @@
 // HEADER: la barra superior de toda la tienda.
 // Logo circular + nombre en la tipografia de la marca + navegacion.
 // ============================================================
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { CarritoService } from '../core/carrito.service';
+import { AuthService } from '../core/auth.service';
+import { CatalogoService } from '../core/catalogo.service';
+import { CatalogoTile } from '../core/modelos';
 
 @Component({
   selector: 'app-header',
@@ -24,16 +27,49 @@ import { CarritoService } from '../core/carrito.service';
       <nav class="nav">
         <a routerLink="/catalogo" routerLinkActive="activo">Catálogo</a>
         <a routerLink="/tokens" routerLinkActive="activo">Tokens</a>
-        <a routerLink="/vender" routerLinkActive="activo">Vende tu colección</a>
+        <a routerLink="/lista" routerLinkActive="activo">Compra por lista</a>
       </nav>
 
-      <!-- Buscador rapido: Enter lleva al catalogo filtrado por ese nombre -->
+      <!-- Buscador rapido: al escribir muestra hasta 5 sugerencias;
+           Enter lleva al catalogo filtrado por ese nombre -->
       <div class="buscador-header">
         <input
+          #campoBusqueda
           type="search"
           placeholder="Buscar carta…"
-          (keyup.enter)="buscar($any($event.target).value)">
+          (input)="alEscribir(campoBusqueda.value)"
+          (keyup.enter)="buscar(campoBusqueda.value)"
+          (blur)="cerrarSugerencias()">
         <span class="lupa">🔍</span>
+        @if (sugerencias().length > 0) {
+          <div class="sugerencias">
+            <!-- Cada sugerencia es una VARIANTE del catalogo: la misma
+                 carta puede salir varias veces (arte alterno, foil...) -->
+            @for (tile of sugerencias(); track tile.cardId + '-' + tile.finish) {
+              <!-- mousedown (no click): se dispara ANTES del blur del
+                   input, asi la navegacion gana antes de que el panel
+                   se cierre -->
+              <button class="sugerencia" (mousedown)="irACarta(tile, campoBusqueda)">
+                @if (tile.imageUrl) {
+                  <img [src]="tile.imageUrl" alt="" class="sugerencia-img">
+                }
+                <span class="sugerencia-info">
+                  <span class="sugerencia-nombre">
+                    {{ tile.name }}
+                    @if (etiquetaAcabado(tile)) {
+                      <span class="sugerencia-foil">({{ etiquetaAcabado(tile) }})</span>
+                    }
+                  </span>
+                  <span class="sugerencia-set">{{ tile.setName }} · #{{ tile.collectorNumber }}</span>
+                </span>
+                <span class="sugerencia-datos">
+                  <span class="sugerencia-precio">{{ formatoPrecio(tile.precio) }}</span>
+                  <span class="sugerencia-stock">{{ tile.stockTotal }} disp.</span>
+                </span>
+              </button>
+            }
+          </div>
+        }
       </div>
 
       <!-- Acciones del usuario: carrito e ingreso -->
@@ -44,7 +80,13 @@ import { CarritoService } from '../core/carrito.service';
             <span class="carrito-badge">{{ carrito.cantidadTotal() }}</span>
           }
         </button>
-        <a routerLink="/login" class="btn-fantasma btn-chico">Ingresar</a>
+        <!-- Si hay sesion: nombre del usuario + salir. Si no: Ingresar. -->
+        @if (auth.logueado()) {
+          <span class="usuario-nombre" title="Tu cuenta">👤 {{ auth.nombre() }}</span>
+          <button class="btn-fantasma btn-chico" (click)="salir()">Salir</button>
+        } @else {
+          <a routerLink="/login" class="btn-fantasma btn-chico">Ingresar</a>
+        }
       </div>
     </header>
   `,
@@ -99,12 +141,13 @@ import { CarritoService } from '../core/carrito.service';
       gap: 1.6rem;
     }
 
-    /* Buscador rapido del header */
+    /* Buscador rapido del header. margin 0 auto = se centra en el
+       espacio libre entre la navegacion y las acciones */
     .buscador-header {
       position: relative;
       flex: 1;
-      max-width: 300px;
-      margin-left: auto;
+      max-width: 400px;
+      margin: 0 auto;
     }
     .buscador-header input {
       width: 100%;
@@ -131,6 +174,91 @@ import { CarritoService } from '../core/carrito.service';
       opacity: 0.6;
       pointer-events: none;
     }
+
+    /* Panel de sugerencias colgando debajo del input. Es mas ancho
+       que el input (minmax con vw) para que quepan precio y stock */
+    .sugerencias {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(480px, 90vw);
+      background: rgba(14, 14, 17, 0.98);
+      border: 1px solid var(--dorado-oscuro);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      z-index: 200;
+    }
+    .sugerencia {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      width: 100%;
+      padding: 0.55rem 0.9rem;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.12s;
+    }
+    .sugerencia:hover {
+      background: rgba(212, 175, 55, 0.12);
+    }
+    .sugerencia-img {
+      width: 44px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .sugerencia-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.35;
+      overflow: hidden;
+    }
+    .sugerencia-nombre {
+      color: var(--texto);
+      font-size: 0.95rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    /* Acabado foil con el mismo acento tornasol de los tiles */
+    .sugerencia-foil {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      background: linear-gradient(100deg, #c96be0, #5aa9e8, #52c98a, #e8d152);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .sugerencia-set {
+      color: var(--texto-suave);
+      font-size: 0.76rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    /* Precio y stock a la derecha de cada sugerencia */
+    .sugerencia-datos {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      line-height: 1.35;
+      flex-shrink: 0;
+    }
+    .sugerencia-precio {
+      color: var(--dorado);
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+    .sugerencia-stock {
+      color: var(--texto-suave);
+      font-size: 0.72rem;
+    }
     .nav a {
       color: var(--texto-suave);
       font-weight: 500;
@@ -149,6 +277,17 @@ import { CarritoService } from '../core/carrito.service';
     .btn-chico {
       padding: 0.45rem 1.1rem;
       font-size: 0.85rem;
+    }
+
+    /* Nombre del usuario logueado */
+    .usuario-nombre {
+      color: var(--dorado);
+      font-weight: 600;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .acciones {
@@ -187,11 +326,73 @@ import { CarritoService } from '../core/carrito.service';
 })
 export class Header {
   private router = inject(Router);
+  private catalogo = inject(CatalogoService);
   carrito = inject(CarritoService);
+  auth = inject(AuthService);
+
+  // Sugerencias del buscador: max 5 VARIANTES del catalogo con stock
+  // (la misma carta puede aparecer varias veces: arte alterno, foil...)
+  sugerencias = signal<CatalogoTile[]>([]);
+  // Temporizador del "debounce": espera a que el usuario deje de
+  // escribir antes de consultar la API (evita una llamada por letra)
+  private timerBusqueda?: ReturnType<typeof setTimeout>;
+
+  // Cierra la sesion y vuelve al inicio (por si estaba en una
+  // pagina que requiere cuenta, como el checkout)
+  salir() {
+    this.auth.logout();
+    this.router.navigate(['/']);
+  }
+
+  // Cada letra reinicia el temporizador; solo cuando pasan 250ms
+  // sin escribir se consulta el backend. Minimo 2 letras.
+  alEscribir(texto: string) {
+    clearTimeout(this.timerBusqueda);
+    const t = texto.trim();
+    if (t.length < 2) {
+      this.sugerencias.set([]);
+      return;
+    }
+    this.timerBusqueda = setTimeout(() => {
+      // El endpoint del catalogo devuelve cada variante como su
+      // propio resultado (con precio y stock ya calculados)
+      this.catalogo.buscarCatalogo({ nombre: t, size: 5 }).subscribe({
+        next: pagina => this.sugerencias.set(pagina.content),
+        error: () => this.sugerencias.set([])
+      });
+    }, 250);
+  }
+
+  // Clic en una sugerencia: va al detalle de esa carta
+  irACarta(tile: CatalogoTile, campo: HTMLInputElement) {
+    campo.value = '';
+    this.sugerencias.set([]);
+    this.router.navigate(['/carta', tile.cardId]);
+  }
+
+  // Etiqueta del acabado (foil/etched/surgefoil...); vacia si es normal
+  etiquetaAcabado(tile: CatalogoTile): string {
+    if (tile.specialFoilType) return tile.specialFoilType;
+    return tile.finish === 'normal' ? '' : tile.finish;
+  }
+
+  formatoPrecio(cop: number): string {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency', currency: 'COP', maximumFractionDigits: 0
+    }).format(cop);
+  }
+
+  // Al salir del campo se ocultan las sugerencias. El pequeno
+  // retraso deja que un mousedown en una sugerencia gane primero.
+  cerrarSugerencias() {
+    setTimeout(() => this.sugerencias.set([]), 150);
+  }
 
   // Lleva al catalogo filtrado por el texto buscado.
   // Si el campo esta vacio, va al catalogo sin filtro.
   buscar(texto: string) {
+    clearTimeout(this.timerBusqueda);
+    this.sugerencias.set([]);
     const t = texto.trim();
     this.router.navigate(['/catalogo'], {
       queryParams: t ? { buscar: t } : {}
