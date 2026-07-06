@@ -141,13 +141,28 @@ import { CatalogoTile } from '../core/modelos';
       gap: 1.6rem;
     }
 
-    /* Buscador rapido del header: pegado a la navegacion (izquierda);
-       margin-right auto empuja las acciones al extremo derecho */
+    /* Buscador rapido del header: anclado al CENTRO exacto de la
+       pagina (el mismo eje del logo grande del inicio). position
+       absolute lo saca de la fila y left 50% + translateX(-50%)
+       lo centra sin importar cuanto ocupen el menu o las acciones */
     .buscador-header {
-      position: relative;
-      flex: 1;
-      max-width: 400px;
-      margin-right: auto;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: clamp(220px, 26vw, 380px);
+    }
+    /* En pantallas angostas no hay campo para centrarlo sin tapar
+       el menu: vuelve a la fila normal, entre el menu y las acciones */
+    @media (max-width: 1100px) {
+      .buscador-header {
+        position: relative;
+        left: auto;
+        transform: none;
+        flex: 1;
+        width: auto;
+        max-width: 320px;
+        margin-left: auto;
+      }
     }
     .buscador-header input {
       width: 100%;
@@ -295,6 +310,7 @@ import { CatalogoTile } from '../core/modelos';
       display: flex;
       align-items: center;
       gap: 0.9rem;
+      margin-left: auto;   /* pegadas al extremo derecho */
     }
     /* Icono del carrito con el numerito de cuantas cartas lleva */
     .carrito-btn {

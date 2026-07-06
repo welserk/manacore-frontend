@@ -8,12 +8,16 @@ import { inject } from '@angular/core';
 import { Router, Routes } from '@angular/router';
 import { AuthService } from './core/auth.service';
 
-// Guardia de las paginas de cuenta: si no hay sesion iniciada,
-// devuelve al inicio en vez de mostrar una pagina vacia/rota
-const soloConSesion = () => {
+// Guardia de las paginas que requieren cuenta: si no hay sesion,
+// lleva al LOGIN y le dice a donde volver despues (?volver=...)
+// para que el cliente no pierda el hilo de lo que iba a hacer
+import type { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
+const soloConSesion = (_ruta: ActivatedRouteSnapshot, estado: RouterStateSnapshot) => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  return auth.logueado() ? true : router.createUrlTree(['/']);
+  return auth.logueado()
+    ? true
+    : router.createUrlTree(['/login'], { queryParams: { volver: estado.url } });
 };
 
 export const routes: Routes = [
@@ -65,6 +69,21 @@ export const routes: Routes = [
     path: 'pago/:resultado',
     loadComponent: () => import('./pages/pago/pago-resultado').then(m => m.PagoResultado),
     title: 'Pago — ManaCore TCG'
+  },
+
+  // Ingresar / crear cuenta (con retorno via ?volver=)
+  {
+    path: 'login',
+    loadComponent: () => import('./pages/login/login').then(m => m.Login),
+    title: 'Ingresar — ManaCore TCG'
+  },
+
+  // Vende tu coleccion: oferta con lista + adjunto (requiere sesion)
+  {
+    path: 'vender',
+    canActivate: [soloConSesion],
+    loadComponent: () => import('./pages/vender/vender').then(m => m.Vender),
+    title: 'Vende tu colección — ManaCore TCG'
   },
 
   // Mi cuenta: perfil y direccion de envio (requiere sesion)

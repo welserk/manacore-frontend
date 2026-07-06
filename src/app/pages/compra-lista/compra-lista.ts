@@ -32,17 +32,19 @@ interface ResultadoLinea {
       <p class="miga">CATÁLOGO</p>
       <h1>Importar lista</h1>
       <p class="explicacion">
-        Pega tu lista o carga un archivo de texto — puede ser de Moxfield,
-        Archidekt, un mazo de torneo o donde la tengas. Formatos habituales:
-        <code>1 Nombre de carta</code>, <code>1x Island</code>, <code>1xisland</code>.
-        Líneas vacías y comentarios con <code>//</code> se ignoran.
+        Pega en el cuadro tu lista de cartas (o cárgala desde un archivo de
+        texto) — sirve la de Moxfield, Archidekt o cualquier mazo de torneo.
+        Escribe <strong>una carta por línea con la cantidad adelante</strong>,
+        como en el ejemplo: <code>1 Island</code> o <code>2x Counterspell</code>.
+        Al darle <strong>Consultar</strong>, abajo aparecerán todas las versiones
+        disponibles de cada carta, listas para agregar al carrito.
       </p>
 
       <textarea
         [value]="texto()"
         (input)="texto.set($any($event.target).value)"
         rows="12"
-        placeholder="1 Accumulate Wisdom&#10;1 Island&#10;1x Lightning Bolt&#10;// comentario&#10;2 Counterspell"></textarea>
+        placeholder="1 Accumulate Wisdom&#10;1 Island&#10;1x Lightning Bolt&#10;2 Counterspell"></textarea>
 
       <div class="acciones-lista">
         <button class="btn-dorado" (click)="consultar()"
