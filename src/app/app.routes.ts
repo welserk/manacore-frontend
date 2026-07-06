@@ -71,6 +71,20 @@ export const routes: Routes = [
     title: 'Pago — ManaCore TCG'
   },
 
+  // Tokens disponibles (seccion separada del catalogo)
+  {
+    path: 'tokens',
+    loadComponent: () => import('./pages/tokens/tokens').then(m => m.Tokens),
+    title: 'Tokens — ManaCore TCG'
+  },
+
+  // Terminos y condiciones (contenido editable desde el panel admin)
+  {
+    path: 'terminos',
+    loadComponent: () => import('./pages/terminos/terminos').then(m => m.Terminos),
+    title: 'Términos y condiciones — ManaCore TCG'
+  },
+
   // Ingresar / crear cuenta (con retorno via ?volver=)
   {
     path: 'login',

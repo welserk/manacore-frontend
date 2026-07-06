@@ -7,7 +7,7 @@
 // alla en vez de dejarte en el inicio. Viaja como query param:
 //   /login?volver=/vender
 // ============================================================
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/auth.service';
@@ -17,6 +17,11 @@ import { AuthService } from '../../core/auth.service';
   imports: [FormsModule],
   template: `
     <section class="acceso-pagina">
+      <!-- Aviso de contexto: le explica al cliente POR QUE llego aqui
+           (ej: intento entrar a "Vende tu coleccion" sin sesion) -->
+      @if (mensajeContexto()) {
+        <p class="contexto">🔒 {{ mensajeContexto() }}</p>
+      }
       <div class="panel tarjeta">
         <div class="tabs">
           <button [class.activo]="modo() === 'login'"
@@ -82,12 +87,39 @@ import { AuthService } from '../../core/auth.service';
     </section>
   `,
   styles: `
+    /* Fondo de la pagina: arte de Liliana of the Veil (Steve Argyle,
+       imagen servida por Scryfall, la misma fuente del catalogo),
+       oscurecida con un degradado para que el formulario se lea bien
+       y se funda con el negro de la marca hacia abajo */
     .acceso-pagina {
-      max-width: 480px;
-      margin: 0 auto;
+      min-height: calc(100vh - 80px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       padding: 3rem 2rem;
+      background:
+        linear-gradient(180deg,
+          rgba(10, 10, 12, 0.78) 0%,
+          rgba(10, 10, 12, 0.88) 55%,
+          #0d0d0d 100%),
+        url('https://cards.scryfall.io/art_crop/front/e/f/efbb7256-9337-4183-8bda-a419f3f2c501.jpg?1782726481')
+        center 22% / cover no-repeat;
     }
-    .tarjeta { padding: 1.5rem 1.6rem; }
+    .contexto {
+      color: var(--dorado);
+      font-size: 0.92rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      text-align: center;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    }
+    .tarjeta {
+      width: min(480px, 100%);
+      padding: 1.5rem 1.6rem;
+      background: rgba(14, 14, 17, 0.9);   /* semitransparente sobre el arte */
+      backdrop-filter: blur(4px);
+    }
 
     .tabs {
       display: flex;
@@ -121,6 +153,12 @@ import { AuthService } from '../../core/auth.service';
       color: var(--texto-suave);
     }
     input {
+      /* width 100% + border-box: el campo ocupa EXACTAMENTE su columna.
+         Sin esto, los input usan su ancho "natural" del navegador y se
+         salen de la tarjeta en las filas de dos columnas */
+      width: 100%;
+      box-sizing: border-box;
+      min-width: 0;
       background: var(--negro);
       border: 1px solid var(--negro-borde);
       border-radius: 8px;
@@ -137,6 +175,9 @@ import { AuthService } from '../../core/auth.service';
       grid-template-columns: 1fr 1fr;
       gap: 0.9rem;
     }
+    /* min-width 0: permite que las celdas de la grilla se encojan
+       (por defecto una celda nunca se hace mas chica que su contenido) */
+    .fila-doble label { min-width: 0; }
     .enviar { margin-top: 0.4rem; }
     .enviar:disabled { opacity: 0.55; cursor: not-allowed; }
     .nota { font-size: 0.8rem; color: var(--texto-suave); line-height: 1.5; }
@@ -170,6 +211,18 @@ export class Login {
   cargando = signal(false);
   error = signal('');
   aviso = signal('');
+
+  // Mensaje segun de DONDE venia el cliente (query param ?volver=)
+  mensajeContexto = computed(() => {
+    const volver = this.ruta.snapshot.queryParamMap.get('volver') ?? '';
+    if (volver.startsWith('/vender')) {
+      return 'Para vender tu colección primero debes iniciar sesión.';
+    }
+    if (volver.startsWith('/cuenta')) {
+      return 'Para ver tu cuenta primero debes iniciar sesión.';
+    }
+    return '';
+  });
 
   email = signal('');
   password = signal('');

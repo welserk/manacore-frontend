@@ -30,8 +30,8 @@ const ESTADOS: Record<string, { texto: string; color: string }> = {
       <p class="explicacion">
         ¿Tienes cartas que ya no usas? Cuéntanos qué tienes: pega la lista en el
         cuadro (una carta por línea, con la expansión si la sabes) y si quieres
-        adjunta una foto, Excel o PDF. La revisamos y te contactamos por WhatsApp
-        con una oferta.
+        adjunta un Excel, PDF o archivo de texto con el detalle. La revisamos y
+        te contactamos por WhatsApp con una oferta.
       </p>
 
       <div class="panel tarjeta">
@@ -49,11 +49,12 @@ const ESTADOS: Record<string, { texto: string; color: string }> = {
               <input type="tel" name="telefono" required placeholder="3001234567"
                      [ngModel]="telefono()" (ngModelChange)="telefono.set($event)">
             </label>
-            <label>Archivo adjunto (opcional)
+            <label>Archivo adjunto (opcional: Excel, PDF o texto)
               <!-- El input file no se puede "bindear" con ngModel:
-                   se lee el archivo elegido en el evento change -->
+                   se lee el archivo elegido en el evento change.
+                   Solo listas: Excel, CSV, PDF o texto (fotos NO) -->
               <input type="file" name="archivo"
-                     accept="image/*,.pdf,.xlsx,.xls,.csv,.txt"
+                     accept=".pdf,.xlsx,.xls,.csv,.txt"
                      (change)="elegirArchivo($event)">
             </label>
           </div>
@@ -224,8 +225,28 @@ export class Vender {
     this.servicio.misOfertas().subscribe(lista => this.ofertas.set(lista));
   }
 
+  // Tipos de archivo permitidos (solo LISTAS, no fotos)
+  private static readonly EXTENSIONES = ['.pdf', '.xlsx', '.xls', '.csv', '.txt'];
+
   elegirArchivo(evento: Event) {
-    this.archivo.set((evento.target as HTMLInputElement).files?.[0] ?? null);
+    const input = evento.target as HTMLInputElement;
+    const archivo = input.files?.[0] ?? null;
+    if (!archivo) {
+      this.archivo.set(null);
+      return;
+    }
+    // El "accept" del input es solo una sugerencia del navegador:
+    // aqui se valida de verdad la extension del archivo elegido
+    const nombre = archivo.name.toLowerCase();
+    const valido = Vender.EXTENSIONES.some(ext => nombre.endsWith(ext));
+    if (!valido) {
+      this.error.set('Solo se aceptan archivos de lista: Excel (.xlsx/.xls), CSV, PDF o texto (.txt).');
+      input.value = '';          // limpia la eleccion invalida
+      this.archivo.set(null);
+      return;
+    }
+    this.error.set('');
+    this.archivo.set(archivo);
   }
 
   enviar() {
