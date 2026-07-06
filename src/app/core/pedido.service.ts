@@ -14,6 +14,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_URL } from './catalogo.service';
+import { CardVariant } from './modelos';
 
 // Un renglon del pedido: la variante exacta y cuantas
 export interface ItemPedido {
@@ -48,6 +49,35 @@ export interface CheckoutPago {
   total: number;
 }
 
+// Un renglon del HISTORIAL (entidad OrderItem del backend):
+// guarda el precio al momento de la compra, aunque cambie despues
+export interface ItemDePedido {
+  id: number;
+  variant: CardVariant;     // la variante exacta comprada (trae la carta)
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+}
+
+// Un pedido del historial (entidad Order, lo que el cliente ve)
+export interface Pedido {
+  id: number;
+  orderNumber: string;
+  status: string;           // AWAITING_PAYMENT | PAID | SHIPPED | DELIVERED | CANCELLED
+  totalCop: number;
+  shippingCost: number;
+  shippingAddress: string;
+  shippingCity: string;
+  notes: string | null;
+  trackingNumber: string | null;   // numero de guia (cuando se despacha)
+  shippingCarrier: string | null;  // transportadora
+  guideFilePath: string | null;    // foto/PDF de la guia: /uploads/...
+  createdAt: string;
+  paidAt: string | null;
+  shippedAt: string | null;
+  items: ItemDePedido[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class PedidoService {
 
@@ -60,5 +90,10 @@ export class PedidoService {
   crearCheckout(orderNumber: string): Observable<CheckoutPago> {
     return this.http.post<CheckoutPago>(
       `${API_URL}/api/pagos/checkout/${orderNumber}`, {});
+  }
+
+  // Mi historial de pedidos (la identidad sale del token)
+  misPedidos(): Observable<Pedido[]> {
+    return this.http.get<Pedido[]>(`${API_URL}/api/pedidos/mios`);
   }
 }

@@ -4,7 +4,17 @@
 // Las paginas se cargan de forma perezosa (loadComponent):
 // solo se descargan cuando el usuario las visita.
 // ============================================================
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { Router, Routes } from '@angular/router';
+import { AuthService } from './core/auth.service';
+
+// Guardia de las paginas de cuenta: si no hay sesion iniciada,
+// devuelve al inicio en vez de mostrar una pagina vacia/rota
+const soloConSesion = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return auth.logueado() ? true : router.createUrlTree(['/']);
+};
 
 export const routes: Routes = [
   // Pagina de inicio
@@ -55,6 +65,22 @@ export const routes: Routes = [
     path: 'pago/:resultado',
     loadComponent: () => import('./pages/pago/pago-resultado').then(m => m.PagoResultado),
     title: 'Pago — ManaCore TCG'
+  },
+
+  // Mi cuenta: perfil y direccion de envio (requiere sesion)
+  {
+    path: 'cuenta',
+    canActivate: [soloConSesion],
+    loadComponent: () => import('./pages/cuenta/cuenta').then(m => m.Cuenta),
+    title: 'Mi cuenta — ManaCore TCG'
+  },
+
+  // Mis pedidos: historial con estado y rastreo (requiere sesion)
+  {
+    path: 'cuenta/pedidos',
+    canActivate: [soloConSesion],
+    loadComponent: () => import('./pages/mis-pedidos/mis-pedidos').then(m => m.MisPedidos),
+    title: 'Mis pedidos — ManaCore TCG'
   },
 
   // Las demas paginas (catalogo, tokens, vender, login, terminos...)

@@ -80,9 +80,9 @@ import { CatalogoTile } from '../core/modelos';
             <span class="carrito-badge">{{ carrito.cantidadTotal() }}</span>
           }
         </button>
-        <!-- Si hay sesion: nombre del usuario + salir. Si no: Ingresar. -->
+        <!-- Si hay sesion: nombre (lleva a Mi cuenta) + salir. Si no: Ingresar. -->
         @if (auth.logueado()) {
-          <span class="usuario-nombre" title="Tu cuenta">👤 {{ auth.nombre() }}</span>
+          <a routerLink="/cuenta" class="usuario-nombre" title="Mi cuenta">👤 {{ auth.nombre() }}</a>
           <button class="btn-fantasma btn-chico" (click)="salir()">Salir</button>
         } @else {
           <a routerLink="/login" class="btn-fantasma btn-chico">Ingresar</a>
@@ -279,7 +279,7 @@ import { CatalogoTile } from '../core/modelos';
       font-size: 0.85rem;
     }
 
-    /* Nombre del usuario logueado */
+    /* Nombre del usuario logueado (enlace a Mi cuenta) */
     .usuario-nombre {
       color: var(--dorado);
       font-weight: 600;
@@ -289,6 +289,7 @@ import { CatalogoTile } from '../core/modelos';
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    .usuario-nombre:hover { text-decoration: underline; }
 
     .acciones {
       display: flex;

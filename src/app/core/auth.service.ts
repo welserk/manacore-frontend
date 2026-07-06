@@ -103,8 +103,29 @@ export class AuthService {
   // Actualiza el perfil. OJO: el backend REEMPLAZA nombre, telefono,
   // direccion, ciudad y notas con lo que llegue — siempre hay que
   // mandar el perfil COMPLETO (leer primero, cambiar lo necesario).
+  // Si cambio el nombre, se refresca tambien en la sesion guardada
+  // para que el header lo muestre al instante.
   actualizarPerfil(perfil: Perfil): Observable<Perfil> {
-    return this.http.put<Perfil>(`${API_URL}/api/auth/perfil`, perfil);
+    return this.http.put<Perfil>(`${API_URL}/api/auth/perfil`, perfil)
+      .pipe(tap(actualizado => {
+        const s = this.sesion();
+        if (s && s.nombre !== actualizado.name) {
+          this.guardarSesion({ ...s, nombre: actualizado.name });
+        }
+      }));
+  }
+
+  // Cambia la contrasena (el backend exige la actual como seguridad)
+  cambiarPassword(currentPassword: string, newPassword: string): Observable<{ mensaje: string }> {
+    return this.http.put<{ mensaje: string }>(
+      `${API_URL}/api/auth/cambiar-password`, { currentPassword, newPassword });
+  }
+
+  // Pide el cambio de email: el backend envia un link de confirmacion
+  // AL CORREO NUEVO; el actual sigue activo hasta confirmar desde alla
+  cambiarEmail(nuevoEmail: string, password: string): Observable<{ mensaje: string }> {
+    return this.http.post<{ mensaje: string }>(
+      `${API_URL}/api/auth/cambiar-email`, { nuevoEmail, password });
   }
 
   private guardarSesion(sesion: Sesion) {
