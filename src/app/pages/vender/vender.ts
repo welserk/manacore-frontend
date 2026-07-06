@@ -24,7 +24,9 @@ const ESTADOS: Record<string, { texto: string; color: string }> = {
   selector: 'app-vender',
   imports: [FormsModule],
   template: `
-    <section class="vender">
+    <!-- Fondo: Nissa, Who Shakes the World -->
+    <section class="vender fondo-arte"
+             style="--arte-fondo: url('https://cards.scryfall.io/art_crop/front/f/8/f857bbe4-5619-4733-a0c7-69700f2ef4f3.jpg?1782708637')">
       <p class="miga">TIENDA</p>
       <h1>Vende tu colección</h1>
       <p class="explicacion">

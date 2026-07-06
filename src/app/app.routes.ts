@@ -20,6 +20,16 @@ const soloConSesion = (_ruta: ActivatedRouteSnapshot, estado: RouterStateSnapsho
     : router.createUrlTree(['/login'], { queryParams: { volver: estado.url } });
 };
 
+// Guardia del panel: SOLO el rol ADMIN puede entrar. Cualquier otro
+// (cliente o sin sesion) va al inicio sin pistas de que existe el panel.
+// (El backend igual protege /manacore-panel/api/** por su lado — esta
+// guardia es de experiencia, la seguridad real esta en el servidor.)
+const soloAdmin = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return auth.sesion()?.rol === 'ADMIN' ? true : router.createUrlTree(['/']);
+};
+
 export const routes: Routes = [
   // Pagina de inicio
   {
@@ -98,6 +108,14 @@ export const routes: Routes = [
     canActivate: [soloConSesion],
     loadComponent: () => import('./pages/vender/vender').then(m => m.Vender),
     title: 'Vende tu colección — ManaCore TCG'
+  },
+
+  // Panel de administracion — Inventario (solo ADMIN)
+  {
+    path: 'manacore-panel',
+    canActivate: [soloAdmin],
+    loadComponent: () => import('./pages/admin/inventario').then(m => m.AdminInventario),
+    title: 'Panel — ManaCore TCG'
   },
 
   // Mi cuenta: perfil y direccion de envio (requiere sesion)

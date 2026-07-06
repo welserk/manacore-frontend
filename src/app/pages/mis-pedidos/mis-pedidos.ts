@@ -24,7 +24,9 @@ const ESTADOS: Record<string, { texto: string; color: string }> = {
   selector: 'app-mis-pedidos',
   imports: [RouterLink, RouterLinkActive],
   template: `
-    <section class="pedidos">
+    <!-- Fondo: Sorin Markov -->
+    <section class="pedidos fondo-arte"
+             style="--arte-fondo: url('https://cards.scryfall.io/art_crop/front/e/2/e25b3a89-3a99-4e02-bf0c-a3cf450da1a1.jpg?1782714894')">
       <h1>Mis pedidos</h1>
 
       <nav class="tabs-cuenta">

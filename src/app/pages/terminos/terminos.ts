@@ -13,7 +13,9 @@ import { LegalService } from '../../core/legal.service';
 @Component({
   selector: 'app-terminos',
   template: `
-    <section class="terminos">
+    <!-- Fondo: Urza, Lord High Artificer -->
+    <section class="terminos fondo-arte"
+             style="--arte-fondo: url('https://cards.scryfall.io/art_crop/front/7/b/7b7a348a-51f7-4dc5-8fe7-1c70fea5e050.jpg?1782733217')">
       @if (cargando()) {
         <p class="cargando">Cargando…</p>
       } @else {

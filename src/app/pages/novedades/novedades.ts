@@ -12,7 +12,9 @@ import { TileCarta } from '../../components/tile-carta';
   selector: 'app-novedades',
   imports: [TileCarta],
   template: `
-    <section class="novedades-pagina">
+    <!-- Fondo: Gideon of the Trials -->
+    <section class="novedades-pagina fondo-arte"
+             style="--arte-fondo: url('https://cards.scryfall.io/art_crop/front/9/5/959ce13f-519f-4472-bbd1-f26a972723d7.jpg?1782711207')">
       <h1>Lo último en la tienda</h1>
       <p class="descripcion">
         Las cartas más recientes agregadas al inventario. ¡Lo que ves aquí acaba de llegar!

@@ -82,6 +82,10 @@ import { CatalogoTile } from '../core/modelos';
         </button>
         <!-- Si hay sesion: nombre (lleva a Mi cuenta) + salir. Si no: Ingresar. -->
         @if (auth.logueado()) {
+          <!-- El acceso al panel solo se muestra al ADMIN -->
+          @if (auth.sesion()?.rol === 'ADMIN') {
+            <a routerLink="/manacore-panel" class="btn-fantasma btn-chico">⚙ Panel</a>
+          }
           <a routerLink="/cuenta" class="usuario-nombre" title="Mi cuenta">👤 {{ auth.nombre() }}</a>
           <button class="btn-fantasma btn-chico" (click)="salir()">Salir</button>
         } @else {

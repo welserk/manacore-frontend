@@ -38,7 +38,9 @@ const CONTENIDO: Record<Resultado, { icono: string; titulo: string; mensaje: str
   selector: 'app-pago-resultado',
   imports: [RouterLink],
   template: `
-    <section class="resultado">
+    <!-- Fondo: Chandra, Torch of Defiance -->
+    <section class="resultado fondo-arte"
+             style="--arte-fondo: url('https://cards.scryfall.io/art_crop/front/4/0/40cb22c8-cb03-45c9-bb0e-b8cabdcc43cd.jpg?1782681487')">
       <div class="panel tarjeta">
         <span class="icono">{{ contenido().icono }}</span>
         <h1>{{ contenido().titulo }}</h1>

@@ -15,7 +15,9 @@ import { API_URL } from '../../core/catalogo.service';
   selector: 'app-tokens',
   imports: [RouterLink],
   template: `
-    <section class="tokens">
+    <!-- Fondo: Ugin, the Spirit Dragon -->
+    <section class="tokens fondo-arte"
+             style="--arte-fondo: url('https://cards.scryfall.io/art_crop/front/9/c/9c017fa9-7021-417a-9c2e-3df409644fcf.jpg?1782707011')">
       <p class="miga">CATÁLOGO</p>
       <h1>Tokens</h1>
       <p class="explicacion">

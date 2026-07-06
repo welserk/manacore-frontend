@@ -24,7 +24,9 @@ const CIUDAD_LOCAL = 'armenia';
   selector: 'app-checkout',
   imports: [RouterLink, FormsModule],
   template: `
-    <section class="checkout">
+    <!-- Fondo: Karn Liberated -->
+    <section class="checkout fondo-arte"
+             style="--arte-fondo: url('https://cards.scryfall.io/art_crop/front/4/b/4b0c6662-4dde-40a2-97e0-0318478c0367.jpg?1782744061')">
       <h1>Finalizar compra</h1>
 
       @if (carrito.items().length === 0) {

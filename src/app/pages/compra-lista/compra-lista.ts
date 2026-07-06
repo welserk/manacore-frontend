@@ -28,7 +28,9 @@ interface ResultadoLinea {
   selector: 'app-compra-lista',
   imports: [TileCatalogo],
   template: `
-    <section class="compra-lista">
+    <!-- Fondo: Teferi, Hero of Dominaria -->
+    <section class="compra-lista fondo-arte"
+             style="--arte-fondo: url('https://cards.scryfall.io/art_crop/front/5/d/5d10b752-d9cb-419d-a5c4-d4ee1acb655e.jpg?1782710071')">
       <p class="miga">CATÁLOGO</p>
       <h1>Importar lista</h1>
       <p class="explicacion">

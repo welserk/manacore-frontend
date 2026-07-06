@@ -135,6 +135,26 @@ a:hover {
   box-shadow: 0 0 14px rgba(212, 175, 55, 0.25);
 }
 
+/* ------- Fondo de arte por pagina -------
+   Cada pagina puede tener un arte de Magic de fondo (como Liliana
+   en el login): se le pone la clase "fondo-arte" a su <section>
+   raiz y se elige el arte con la variable --arte-fondo.
+   El ::before es una capa FIJA que cubre toda la ventana, detras
+   del contenido (z-index -1), con un degradado oscuro encima para
+   que el texto y las tarjetas se lean perfecto. */
+.fondo-arte::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(180deg,
+      rgba(10, 10, 12, 0.86) 0%,
+      rgba(10, 10, 12, 0.93) 55%,
+      #0a0a0c 100%),
+    var(--arte-fondo) center 22% / cover no-repeat;
+}
+
 /* ------- Tarjetas / superficies ------- */
 .panel {
   background: var(--negro-suave);

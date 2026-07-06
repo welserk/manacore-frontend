@@ -16,7 +16,9 @@ import { AuthService, Perfil } from '../../core/auth.service';
   selector: 'app-cuenta',
   imports: [RouterLink, RouterLinkActive, FormsModule],
   template: `
-    <section class="cuenta">
+    <!-- Fondo: Ajani Goldmane -->
+    <section class="cuenta fondo-arte"
+             style="--arte-fondo: url('https://cards.scryfall.io/art_crop/front/2/d/2d911053-a026-4b20-ba2d-dbcc367c1413.jpg?1782715436')">
       <h1>Mi cuenta</h1>
 
       <!-- Pestanas de la seccion de cuenta -->
