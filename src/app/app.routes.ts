@@ -49,6 +49,14 @@ export const routes: Routes = [
     title: 'Compra por lista — ManaCore TCG'
   },
 
+  // Retorno de MercadoPago: exitoso, pendiente o fallido
+  // (las backUrls del backend apuntan a estas rutas)
+  {
+    path: 'pago/:resultado',
+    loadComponent: () => import('./pages/pago/pago-resultado').then(m => m.PagoResultado),
+    title: 'Pago — ManaCore TCG'
+  },
+
   // Las demas paginas (catalogo, tokens, vender, login, terminos...)
   // se agregan aqui a medida que las construyamos en las siguientes etapas
 

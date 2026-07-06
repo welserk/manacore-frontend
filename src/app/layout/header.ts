@@ -27,7 +27,7 @@ import { CatalogoTile } from '../core/modelos';
       <nav class="nav">
         <a routerLink="/catalogo" routerLinkActive="activo">Catálogo</a>
         <a routerLink="/tokens" routerLinkActive="activo">Tokens</a>
-        <a routerLink="/lista" routerLinkActive="activo">Compra por lista</a>
+        <a routerLink="/vender" routerLinkActive="activo">Vende tu colección</a>
       </nav>
 
       <!-- Buscador rapido: al escribir muestra hasta 5 sugerencias;
@@ -141,13 +141,13 @@ import { CatalogoTile } from '../core/modelos';
       gap: 1.6rem;
     }
 
-    /* Buscador rapido del header. margin 0 auto = se centra en el
-       espacio libre entre la navegacion y las acciones */
+    /* Buscador rapido del header: pegado a la navegacion (izquierda);
+       margin-right auto empuja las acciones al extremo derecho */
     .buscador-header {
       position: relative;
       flex: 1;
       max-width: 400px;
-      margin: 0 auto;
+      margin-right: auto;
     }
     .buscador-header input {
       width: 100%;

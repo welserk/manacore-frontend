@@ -12,6 +12,7 @@ import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CarritoService } from '../../core/carrito.service';
 import { AuthService, Perfil } from '../../core/auth.service';
+import { PedidoService } from '../../core/pedido.service';
 
 // Costo de envio informativo (el valor REAL lo calcula el backend
 // al crear el pedido, desde store_config). Si el dueño cambia la
@@ -191,11 +192,18 @@ const CIUDAD_LOCAL = 'armenia';
 
             <p class="nota">📦 Envío gratis en Armenia · {{ formato(envioNacional) }} al resto del país (se paga una sola vez por pedido)</p>
 
-            <button class="btn-dorado enviar" disabled
-                    title="Se conecta en el siguiente paso">
-              🔒 Pagar con MercadoPago
+            @if (errorPago()) { <p class="error">{{ errorPago() }}</p> }
+
+            <!-- Crea el pedido y redirige a la pagina de pago de
+                 MercadoPago (PSE, tarjeta, Nequi...) -->
+            <button class="btn-dorado enviar"
+                    [disabled]="pagando() || !puedePagar()"
+                    (click)="pagar()">
+              {{ pagando() ? 'Preparando tu pago…' : '🔒 Pagar con MercadoPago' }}
             </button>
-            <p class="nota proximo">El botón de pago se activa en el siguiente paso de construcción.</p>
+            @if (!puedePagar() && !pagando()) {
+              <p class="nota proximo">Completa la dirección y la ciudad para continuar.</p>
+            }
           </div>
         }
       }
@@ -369,6 +377,7 @@ const CIUDAD_LOCAL = 'armenia';
 export class Checkout {
   carrito = inject(CarritoService);
   auth = inject(AuthService);
+  private pedidos = inject(PedidoService);
 
   envioNacional = ENVIO_NACIONAL;
 
@@ -425,6 +434,15 @@ export class Checkout {
   // el pedido)
   costoEnvio = computed(() =>
     this.ciudadEfectiva().trim().toLowerCase() === CIUDAD_LOCAL ? 0 : ENVIO_NACIONAL);
+
+  // Estado del pago
+  pagando = signal(false);
+  errorPago = signal('');
+
+  // El boton de pagar se habilita cuando hay direccion y ciudad
+  // (la guardada del perfil o la escrita a mano)
+  puedePagar = computed(() =>
+    !!this.direccionEfectiva().trim() && !!this.ciudadEfectiva().trim());
 
   constructor() {
     // Cuando aparece la sesion (login exitoso o ya venia guardada),
@@ -525,6 +543,50 @@ export class Checkout {
       error: (e) => {
         this.cargando.set(false);
         this.error.set(e.error?.error ?? 'No se pudo crear la cuenta. Intenta de nuevo.');
+      }
+    });
+  }
+
+  // EL PASO FINAL: crea el pedido en el backend y redirige a la
+  // pagina de pago de MercadoPago. Dos llamadas encadenadas:
+  //   1. crearPedido  -> devuelve el orderNumber
+  //   2. crearCheckout(orderNumber) -> devuelve el initPoint
+  // Justo antes de salir se vacia el carrito: el pedido ya quedo
+  // registrado en el backend y esa es la fuente de verdad.
+  pagar() {
+    if (!this.puedePagar() || this.pagando()) return;
+    this.errorPago.set('');
+    this.pagando.set(true);
+
+    this.pedidos.crearPedido({
+      shippingAddress: this.direccionEfectiva(),
+      shippingCity: this.ciudadEfectiva(),
+      notes: this.notas().trim() || undefined,
+      items: this.carrito.items().map(i => ({
+        variantId: i.variantId,
+        quantity: i.cantidad
+      }))
+    }).subscribe({
+      next: (pedido) => {
+        this.pedidos.crearCheckout(pedido.orderNumber).subscribe({
+          next: (checkout) => {
+            this.carrito.vaciar();
+            // Salimos de la app hacia MercadoPago. Al terminar, el
+            // cliente vuelve a /pago/exitoso|pendiente|fallido
+            // (backUrls configuradas en el backend)
+            window.location.href = checkout.initPoint;
+          },
+          error: (e) => {
+            this.pagando.set(false);
+            this.errorPago.set(e.error?.error
+              ?? 'El pedido quedó creado pero no se pudo iniciar el pago. Intenta de nuevo.');
+          }
+        });
+      },
+      error: (e) => {
+        this.pagando.set(false);
+        // El backend explica el problema (ej: "Stock insuficiente para...")
+        this.errorPago.set(e.error?.error ?? 'No se pudo crear el pedido. Intenta de nuevo.');
       }
     });
   }
