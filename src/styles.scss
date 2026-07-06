@@ -1,1 +1,167 @@
-/* You can add global styles to this file, and also import other style files */
+/* ============================================================
+   TEMA GLOBAL DE MANACORE TCG
+   Identidad: fondo negro profundo + dorado metalico del logo
+   + los 5 colores de mana como acentos funcionales.
+   Las variables CSS (--algo) se usan en toda la aplicacion:
+   si un dia quieres ajustar un color, se cambia AQUI una vez.
+   ============================================================ */
+
+:root {
+  /* Fondos */
+  --negro: #0a0a0c;            /* fondo principal de la pagina */
+  --negro-suave: #121216;      /* tarjetas y superficies elevadas */
+  --negro-borde: #26262e;      /* bordes sutiles de tarjetas */
+
+  /* La marca: dorados del logo */
+  --dorado: #d4af37;           /* dorado principal (botones, titulos) */
+  --dorado-claro: #f0d879;     /* brillo, hover, destellos */
+  --dorado-oscuro: #96781f;    /* sombras del dorado, bordes */
+
+  /* Texto */
+  --texto: #eae6da;            /* texto principal, blanco calido */
+  --texto-suave: #a8a496;      /* texto secundario, gris calido */
+
+  /* Los 5 colores de mana (mismos del panel de estadisticas) */
+  --mana-blanco: #f5f1e3;
+  --mana-azul: #2f9de0;
+  --mana-negro: #9457c9;       /* purpura, como la calavera del logo */
+  --mana-rojo: #e03e2f;
+  --mana-verde: #3fae4a;
+
+  /* Estados */
+  --exito: #3fae4a;
+  --error: #e03e2f;
+  --alerta: #e0a52f;
+
+  /* Tipografias */
+  --fuente-titulos: "Cinzel", serif;      /* la serif elegante del logo */
+  --fuente-cuerpo: "Inter", sans-serif;   /* limpia y legible para el resto */
+}
+
+/* ------- Base ------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: var(--negro);
+  color: var(--texto);
+  font-family: var(--fuente-cuerpo);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Titulos siempre con la serif dorada de la marca */
+h1, h2, h3, h4 {
+  font-family: var(--fuente-titulos);
+  color: var(--dorado);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+a {
+  color: var(--dorado);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+a:hover {
+  color: var(--dorado-claro);
+}
+
+/* ------- Botones de la marca ------- */
+.btn-dorado {
+  display: inline-block;
+  position: relative;       /* necesario para el destello interno */
+  overflow: hidden;         /* el destello no se sale del boton */
+  background: linear-gradient(180deg, var(--dorado-claro), var(--dorado) 45%, var(--dorado-oscuro));
+  color: #1a1405;
+  font-family: var(--fuente-titulos);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.7rem 1.6rem;
+  border: 1px solid var(--dorado-oscuro);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.1s, box-shadow 0.2s;
+}
+
+/* El "destello": una banda de luz inclinada que espera fuera del boton... */
+.btn-dorado::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -80%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 240, 0.55), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.45s ease;
+}
+
+/* ...y al pasar el mouse cruza el boton como un reflejo metalico */
+.btn-dorado:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+  color: #1a1405;
+  box-shadow: 0 0 18px rgba(212, 175, 55, 0.45);
+}
+.btn-dorado:hover::after {
+  left: 130%;
+}
+
+.btn-fantasma {
+  display: inline-block;
+  background: transparent;
+  color: var(--dorado);
+  font-family: var(--fuente-titulos);
+  letter-spacing: 0.06em;
+  padding: 0.7rem 1.6rem;
+  border: 1px solid var(--dorado-oscuro);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.2s, border-color 0.2s;
+}
+.btn-fantasma:hover {
+  background: rgba(212, 175, 55, 0.12);
+  color: var(--dorado-claro);
+  border-color: var(--dorado);
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.25);
+}
+
+/* ------- Tarjetas / superficies ------- */
+.panel {
+  background: var(--negro-suave);
+  border: 1px solid var(--negro-borde);
+  border-radius: 10px;
+}
+
+/* Separador dorado decorativo (como el del logo bajo el tagline) */
+.separador-dorado {
+  height: 1px;
+  border: none;
+  background: linear-gradient(90deg, transparent, var(--dorado), transparent);
+  margin: 1.5rem auto;
+  max-width: 420px;
+}
+
+/* ------- Barra de scroll acorde al tema ------- */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--negro);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--negro-borde);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--dorado-oscuro);
+}

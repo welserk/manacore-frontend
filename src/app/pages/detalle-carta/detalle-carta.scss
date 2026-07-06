@@ -1,0 +1,109 @@
+.estado {
+  text-align: center;
+  color: var(--texto-suave);
+  padding: 3rem 0;
+}
+
+.detalle {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2.5rem 2rem;
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+.imagen-grande {
+  width: 100%;
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.columna-datos h1 {
+  font-size: 1.7rem;
+  margin-bottom: 0.2rem;
+}
+.tipo {
+  color: var(--texto);
+  font-size: 0.95rem;
+}
+.meta {
+  color: var(--texto-suave);
+  font-size: 0.85rem;
+  text-transform: capitalize;
+  margin-top: 0.2rem;
+}
+
+.columna-datos h2 {
+  font-size: 1.2rem;
+  margin-bottom: 0.8rem;
+}
+
+/* Tabla de disponibilidad */
+.tabla {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+/* Las 5 columnas tienen el MISMO ancho en la cabecera y en las filas
+   (la ultima es fija de 96px) para que todo quede perfectamente alineado.
+   Precio y stock van centrados sobre su dato. */
+.fila {
+  display: grid;
+  grid-template-columns: 1.3fr 1.2fr 1fr 0.7fr 96px;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--negro-suave);
+  border: 1px solid var(--negro-borde);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+/* Columnas 3 (precio) y 4 (stock) centradas, dato y cabecera igual */
+.fila > :nth-child(3),
+.fila > :nth-child(4) {
+  text-align: center;
+}
+.fila.cabecera {
+  background: transparent;
+  border: none;
+  color: var(--texto-suave);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 0.9rem;
+}
+.col-acabado {
+  font-weight: 600;
+  color: var(--dorado);
+}
+.col-precio {
+  font-weight: 700;
+  color: var(--dorado);
+}
+.btn-agregar {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8rem;
+}
+.btn-agregar[disabled] {
+  opacity: 0.4;
+  cursor: default;
+}
+.nota-carrito {
+  color: var(--texto-suave);
+  font-size: 0.82rem;
+  margin-top: 1rem;
+}
+
+/* En pantallas angostas, una sola columna */
+@media (max-width: 720px) {
+  .detalle {
+    grid-template-columns: 1fr;
+  }
+  .columna-imagen {
+    max-width: 300px;
+    margin: 0 auto;
+  }
+}

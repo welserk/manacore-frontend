@@ -1,0 +1,143 @@
+/* Estilos de la pagina de inicio */
+
+.hero {
+  text-align: center;
+  padding: 3.5rem 1rem 1rem;
+}
+
+.hero-logo {
+  width: 340px;
+  max-width: 80vw;
+  /* Brillo dorado que "respira": crece y se encoge suavemente en bucle */
+  animation: brillo-vivo 4.5s ease-in-out infinite;
+}
+
+/* El resplandor pulsa entre tenue e intenso, como energia de mana */
+@keyframes brillo-vivo {
+  0%, 100% {
+    filter: drop-shadow(0 0 18px rgba(212, 175, 55, 0.15));
+  }
+  50% {
+    filter: drop-shadow(0 0 42px rgba(212, 175, 55, 0.38));
+  }
+}
+
+.hero-frase {
+  color: var(--texto-suave);
+  font-size: 1.05rem;
+  margin: 1.4rem 0 2rem;
+}
+
+.hero-botones {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.sets, .novedades {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1rem 2rem;
+}
+
+.sets h2, .novedades h2 {
+  text-align: center;
+  font-size: 1.4rem;
+  margin-bottom: 1.6rem;
+}
+
+.seccion-vacia {
+  text-align: center;
+  color: var(--texto-suave);
+}
+
+/* Cabecera de seccion con el link "Ver todo" a la derecha */
+.seccion-cabecera {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 1.2rem;
+}
+.ver-todo {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* Grilla de tiles de "Lo último": 6 columnas en pantalla grande */
+.novedades-grilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.sets-grilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.set-tarjeta {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.9rem 1.1rem;
+  position: relative;       /* necesario para el destello interno */
+  overflow: hidden;         /* el destello no se sale de la tarjeta */
+  transition: border-color 0.15s, transform 0.12s, box-shadow 0.2s;
+}
+
+/* El destello dorado que cruza la tarjeta al pasar el mouse
+   (mismo efecto del boton "Explorar el catalogo") */
+.set-tarjeta::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -80%;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(212, 175, 55, 0.16), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.5s ease;
+  pointer-events: none;
+}
+
+.set-tarjeta:hover {
+  border-color: var(--dorado);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.18);
+}
+.set-tarjeta:hover::after {
+  left: 135%;
+}
+
+.set-icono {
+  height: 34px;
+  width: 34px;
+  /* Los iconos de Scryfall son negros: los invertimos para el tema oscuro */
+  filter: invert(0.85) sepia(0.3) saturate(2) hue-rotate(10deg);
+  transition: transform 0.2s, filter 0.2s;
+}
+/* Al pasar el mouse el icono crece y se dora mas intenso */
+.set-tarjeta:hover .set-icono {
+  transform: scale(1.18) rotate(-4deg);
+  filter: invert(0.9) sepia(0.6) saturate(3.5) hue-rotate(5deg) brightness(1.15);
+}
+
+.set-nombre {
+  color: var(--texto);
+  font-size: 0.9rem;
+  font-weight: 500;
+  flex: 1;
+  line-height: 1.3;
+  transition: color 0.15s;
+}
+.set-tarjeta:hover .set-nombre {
+  color: var(--dorado);
+}
+
+.set-fecha {
+  color: var(--texto-suave);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}

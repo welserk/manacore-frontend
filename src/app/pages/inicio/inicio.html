@@ -1,0 +1,56 @@
+<!-- HERO: la portada de la tienda con el logo completo -->
+<section class="hero">
+  <img src="logo/logo-completo.png" alt="ManaCore TCG — Every Card Matters" class="hero-logo">
+  <p class="hero-frase">
+    Singles de Magic: The Gathering en Colombia.<br>
+    Catálogo completo, precios justos y envíos a todo el país.
+  </p>
+  <div class="hero-botones">
+    <a routerLink="/catalogo" class="btn-dorado">Explorar el catálogo</a>
+    <a routerLink="/vender" class="btn-fantasma">Vende tu colección</a>
+  </div>
+</section>
+
+<hr class="separador-dorado">
+
+<!-- EXPANSIONES: solo tipos principales ya lanzados al mercado -->
+<section class="sets">
+  <h2>Expansiones</h2>
+
+  @if (setsRecientes().length === 0) {
+    <!-- Mientras carga o si el backend esta apagado -->
+    <p class="seccion-vacia">Cargando expansiones…</p>
+  } @else {
+    <div class="sets-grilla">
+      @for (set of setsRecientes(); track set.id) {
+        <a class="set-tarjeta panel" [routerLink]="['/catalogo']" [queryParams]="{ set: set.code }">
+          <img [src]="set.iconUrl" [alt]="set.name" class="set-icono">
+          <span class="set-nombre">{{ set.name }}</span>
+          <span class="set-fecha">{{ set.releaseDate }}</span>
+        </a>
+      }
+    </div>
+  }
+</section>
+
+<hr class="separador-dorado">
+
+<!-- LO ULTIMO: las cartas recien subidas a la tienda -->
+<section class="novedades">
+  <div class="seccion-cabecera">
+    <h2>Lo último</h2>
+    <a routerLink="/novedades" class="ver-todo">Ver todo →</a>
+  </div>
+
+  @if (novedades().length === 0) {
+    <p class="seccion-vacia">
+      Pronto verás aquí las últimas cartas agregadas a la tienda.
+    </p>
+  } @else {
+    <div class="novedades-grilla">
+      @for (v of novedades(); track v.id) {
+        <app-tile-carta [variante]="v" />
+      }
+    </div>
+  }
+</section>

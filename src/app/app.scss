@@ -1,0 +1,5 @@
+/* Marco general: la pagina actual ocupa al menos el alto de la
+   pantalla para que el footer no "flote" en paginas cortas */
+.contenido-pagina {
+  min-height: 72vh;
+}

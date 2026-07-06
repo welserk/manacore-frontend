@@ -1,0 +1,54 @@
+@if (cargando()) {
+  <p class="estado">Cargando carta…</p>
+} @else if (!carta()) {
+  <p class="estado">No se encontró la carta.</p>
+} @else {
+  <section class="detalle">
+    <!-- Imagen grande de la carta -->
+    <div class="columna-imagen">
+      @if (carta()!.imageUrl) {
+        <img [src]="carta()!.imageUrl!" [alt]="carta()!.name" class="imagen-grande">
+      }
+    </div>
+
+    <!-- Datos y disponibilidad -->
+    <div class="columna-datos">
+      <h1>{{ carta()!.name }}</h1>
+      <p class="tipo">{{ carta()!.cardType }}</p>
+      <p class="meta">
+        {{ carta()!.mtgSet.name }} · #{{ carta()!.collectorNumber }}
+        @if (carta()!.rarity) { · {{ carta()!.rarity }} }
+      </p>
+
+      <hr class="separador-dorado">
+
+      <h2>Disponibilidad</h2>
+      @if (disponibilidad().length === 0) {
+        <p class="estado">Esta carta no tiene unidades en stock por ahora.</p>
+      } @else {
+        <div class="tabla">
+          <div class="fila cabecera">
+            <span>Acabado</span>
+            <span>Idioma</span>
+            <span>Precio</span>
+            <span>Stock</span>
+            <span></span>
+          </div>
+          @for (fila of disponibilidad(); track fila.variantId) {
+            <div class="fila">
+              <span class="col-acabado">
+                {{ fila.etiquetaFinish }}
+              </span>
+              <span>{{ nombreIdioma(fila.language) }}</span>
+              <span class="col-precio">{{ formatearPrecio(fila.precio) }}</span>
+              <span>{{ fila.stock }}</span>
+              <button class="btn-dorado btn-agregar" (click)="agregarAlCarrito(fila)">
+                Agregar
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </section>
+}

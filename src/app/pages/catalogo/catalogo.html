@@ -1,0 +1,81 @@
+<section class="catalogo">
+  <h1>Catálogo</h1>
+
+  <!-- ============ BARRA DE FILTROS ============ -->
+  <div class="filtros panel">
+
+    <!-- Buscador por nombre -->
+    <input
+      type="search"
+      class="buscador"
+      placeholder="Buscar carta por nombre…"
+      [value]="nombre()"
+      (input)="alEscribirNombre($any($event.target).value)">
+
+    <!-- Expansion -->
+    <select class="selector" [value]="set()" (change)="cambiarSet($any($event.target).value)">
+      <option value="">Todas las expansiones</option>
+      @for (s of setsVisibles(); track s.id) {
+        <option [value]="s.code">{{ s.name }}</option>
+      }
+    </select>
+
+    <!-- Colores de mana: los simbolos oficiales, incluido el incoloro (wastes) -->
+    <div class="colores">
+      @for (c of colores; track c.codigo) {
+        <button
+          [class]="'color-btn brillo-' + c.codigo"
+          [class.activo]="color() === c.codigo"
+          [title]="c.nombre"
+          (click)="alternarColor(c.codigo)">
+          <img [src]="simboloMana(c.codigo)" [alt]="c.nombre" class="color-simbolo">
+        </button>
+      }
+    </div>
+
+    <!-- Rareza (primera letra en mayuscula gracias al pipe titlecase) -->
+    <select class="selector" [value]="rareza()" (change)="cambiarRareza($any($event.target).value)">
+      <option value="">Toda rareza</option>
+      @for (r of rarezas; track r) {
+        <option [value]="r">{{ r | titlecase }}</option>
+      }
+    </select>
+
+    <!-- Ordenamiento -->
+    <select class="selector" [value]="orden()" (change)="cambiarOrden($any($event.target).value)">
+      <option value="precio-desc">Precio: mayor a menor</option>
+      <option value="precio-asc">Precio: menor a mayor</option>
+    </select>
+
+    <button class="btn-fantasma btn-limpiar" (click)="limpiarFiltros()">Limpiar</button>
+  </div>
+
+  <!-- ============ RESULTADOS ============ -->
+  @if (cargando()) {
+    <p class="estado">Buscando cartas…</p>
+  } @else if (!resultados() || resultados()!.content.length === 0) {
+    <p class="estado">
+      No hay cartas disponibles con esos filtros.<br>
+      <span class="estado-sub">El catálogo muestra solo cartas con unidades en stock.</span>
+    </p>
+  } @else {
+    <p class="contador">{{ resultados()!.totalElements }} resultados</p>
+
+    <div class="grilla">
+      @for (t of resultados()!.content; track t.cardId + '-' + t.finish) {
+        <app-tile-catalogo [tile]="t" />
+      }
+    </div>
+
+    <!-- Paginacion -->
+    @if (resultados()!.totalPages > 1) {
+      <div class="paginacion">
+        <button class="btn-fantasma" (click)="paginaAnterior()"
+                [disabled]="pagina() === 0">← Anterior</button>
+        <span class="pagina-info">Página {{ pagina() + 1 }} de {{ resultados()!.totalPages }}</span>
+        <button class="btn-fantasma" (click)="paginaSiguiente()"
+                [disabled]="pagina() >= resultados()!.totalPages - 1">Siguiente →</button>
+      </div>
+    }
+  }
+</section>
