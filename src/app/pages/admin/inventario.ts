@@ -17,8 +17,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { AdminService } from '../../core/admin.service';
-import { Card, CardVariant, NOMBRES_IDIOMA, Pagina } from '../../core/modelos';
+import { AdminService, TipoBusqueda } from '../../core/admin.service';
+import { Card, CardVariant, MtgSet, NOMBRES_IDIOMA, Pagina } from '../../core/modelos';
 
 // Una fila de la tabla de variantes. Puede ser:
 //  - real:    existe en la base de datos (variante con ID)
@@ -45,23 +45,42 @@ interface FilaVariante {
         <a routerLink="/manacore-panel" [routerLinkActiveOptions]="{ exact: true }"
            routerLinkActive="activo">Inventario</a>
         <a routerLink="/manacore-panel/pedidos" routerLinkActive="activo">Pedidos</a>
+        <a routerLink="/manacore-panel/ofertas" routerLinkActive="activo">Ofertas</a>
       </nav>
 
       <p class="explicacion">
-        Busca cualquier carta del censo (incluye las que no tienen stock y los
-        tokens), abre sus variantes y sube el stock de la que llegó.
+        Busca en el censo completo, abre las variantes y sube el stock de lo
+        que llegó. Cada sección va por aparte: cartas, tierras básicas y tokens.
       </p>
+
+      <!-- Secciones del censo: cartas / tierras basicas / tokens -->
+      <div class="tipos">
+        <button [class.activo]="tipo() === 'cartas'" (click)="cambiarTipo('cartas')">🃏 Cartas</button>
+        <button [class.activo]="tipo() === 'basicas'" (click)="cambiarTipo('basicas')">⛰ Tierras básicas</button>
+        <button [class.activo]="tipo() === 'tokens'" (click)="cambiarTipo('tokens')">🪙 Tokens</button>
+      </div>
 
       <!-- ============ BUSCADOR ============ -->
       <form class="buscador panel" (ngSubmit)="buscar(0)">
-        <input type="search" name="nombre" placeholder="Nombre de la carta… (ej: Blood Crypt)"
-               [ngModel]="nombre()" (ngModelChange)="nombre.set($event)">
-        <input type="text" name="set" class="campo-set" placeholder="Set (opcional, ej: rvr)"
-               [ngModel]="set()" (ngModelChange)="set.set($event)">
-        <button class="btn-dorado" [disabled]="cargando() || nombre().trim().length < 2">
+        <input type="search" name="nombre" [placeholder]="placeholderNombre()"
+               [ngModel]="nombre()" (ngModelChange)="alEscribirNombre($event)">
+        <!-- El desplegable se ADAPTA: solo lista los sets donde existe
+             lo que escribiste (con todos los sets si el campo esta vacio) -->
+        <select name="set" class="campo-set"
+                [ngModel]="set()" (ngModelChange)="set.set($event)">
+          <option value="">Todos los sets ({{ setsDisponibles().length }})</option>
+          @for (s of setsDisponibles(); track s.code) {
+            <option [value]="s.code">{{ s.name }} ({{ s.code }})</option>
+          }
+        </select>
+        <button class="btn-dorado" [disabled]="cargando() || !puedeBuscar()">
           {{ cargando() ? 'Buscando…' : 'Buscar' }}
         </button>
       </form>
+      @if (tipo() === 'basicas') {
+        <p class="pista-numero">💡 Puedes buscar por número de coleccionista:
+          <code>Island 234</code> o <code>Mountain #311</code>.</p>
+      }
 
       @if (resultados(); as pagina) {
         <p class="conteo">{{ pagina.totalElements }} impresiones encontradas</p>
@@ -238,13 +257,32 @@ interface FilaVariante {
       max-width: 640px;
     }
 
+    /* Pestañas de seccion (cartas / basicas / tokens) */
+    .tipos { display: flex; gap: 0.6rem; margin-bottom: 1rem; }
+    .tipos button {
+      padding: 0.5rem 1.1rem;
+      background: transparent;
+      border: 1px solid var(--negro-borde);
+      border-radius: 8px;
+      color: var(--texto-suave);
+      font-family: var(--fuente-cuerpo);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tipos button.activo {
+      border-color: var(--dorado);
+      color: var(--dorado);
+      background: rgba(212, 175, 55, 0.08);
+    }
+
     .buscador {
       display: flex;
       gap: 0.8rem;
       padding: 1rem 1.2rem;
-      margin-bottom: 1.4rem;
+      margin-bottom: 0.6rem;
     }
-    .buscador input {
+    .buscador input, .buscador select {
       flex: 1;
       min-width: 0;
       box-sizing: border-box;
@@ -253,12 +291,24 @@ interface FilaVariante {
       border-radius: 8px;
       color: var(--texto);
       font-family: var(--fuente-cuerpo);
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       padding: 0.6rem 0.9rem;
       outline: none;
     }
-    .buscador input:focus { border-color: var(--dorado); }
-    .campo-set { max-width: 180px; }
+    .buscador input:focus, .buscador select:focus { border-color: var(--dorado); }
+    .campo-set { max-width: 280px; }
+    .pista-numero {
+      color: var(--texto-suave);
+      font-size: 0.8rem;
+      margin-bottom: 0.8rem;
+    }
+    .pista-numero code {
+      background: var(--negro);
+      border: 1px solid var(--negro-borde);
+      border-radius: 5px;
+      padding: 0.05rem 0.4rem;
+      font-size: 0.75rem;
+    }
     .conteo { color: var(--texto-suave); font-size: 0.85rem; margin-bottom: 0.9rem; }
 
     .carta { margin-bottom: 0.9rem; overflow: hidden; }
@@ -453,10 +503,14 @@ export class AdminInventario {
   codigosIdioma = Object.keys(NOMBRES_IDIOMA);
 
   // Buscador
+  tipo = signal<TipoBusqueda>('cartas');   // la seccion activa
   nombre = signal('');
   set = signal('');
+  setsDisponibles = signal<MtgSet[]>([]);
   cargando = signal(false);
   resultados = signal<Pagina<Card> | null>(null);
+  // Debounce del desplegable de sets: se refresca cuando dejas de escribir
+  private timerSets?: ReturnType<typeof setTimeout>;
 
   // Variantes de la carta abierta
   abierta = signal<number | null>(null);
@@ -491,11 +545,75 @@ export class AdminInventario {
   nvStock = signal(1);
   creandoVariante = signal(false);
 
+  constructor() {
+    // Al abrir el panel: el desplegable arranca con todos los sets
+    this.cargarSets();
+  }
+
+  // Cambiar de seccion limpia los resultados y recarga el desplegable
+  cambiarTipo(t: TipoBusqueda) {
+    this.tipo.set(t);
+    this.resultados.set(null);
+    this.abierta.set(null);
+    this.set.set('');
+    this.cargarSets();
+  }
+
+  // Cada letra reinicia el temporizador; al dejar de escribir 400ms,
+  // el desplegable de sets se adapta a lo escrito
+  alEscribirNombre(texto: string) {
+    this.nombre.set(texto);
+    clearTimeout(this.timerSets);
+    this.timerSets = setTimeout(() => this.cargarSets(), 400);
+  }
+
+  private cargarSets() {
+    const { nombre } = this.terminoYNumero();
+    this.admin.setsDeBusqueda(nombre, this.tipo()).subscribe({
+      next: (sets) => {
+        this.setsDisponibles.set(sets);
+        // Si el set elegido ya no aplica a la busqueda nueva, se suelta
+        if (this.set() && !sets.some(s => s.code === this.set())) {
+          this.set.set('');
+        }
+      },
+      error: () => this.setsDisponibles.set([])
+    });
+  }
+
+  // Separa "Island 234" o "Mountain #311" en nombre + numero de
+  // coleccionista. Solo en la seccion de basicas: alli tiene sentido
+  // (en cartas normales hay nombres CON numeros, seria peligroso)
+  private terminoYNumero(): { nombre: string; numero: string } {
+    const texto = this.nombre().trim();
+    if (this.tipo() === 'basicas') {
+      const con = texto.match(/^(.*?)[\s#]+(\d+[a-z]?)$/i);
+      if (con) return { nombre: con[1].trim(), numero: con[2] };
+    }
+    return { nombre: texto, numero: '' };
+  }
+
+  // Se puede buscar con nombre (2+ letras), o solo por set, o por numero
+  // (asi en basicas/tokens puedes explorar una expansion entera)
+  puedeBuscar(): boolean {
+    const { nombre, numero } = this.terminoYNumero();
+    return nombre.length >= 2 || !!numero || !!this.set().trim();
+  }
+
+  placeholderNombre(): string {
+    switch (this.tipo()) {
+      case 'basicas': return 'Ej: Island 234, Mountain #311, o solo Island…';
+      case 'tokens':  return 'Nombre del token… (ej: Treasure, Zombie)';
+      default:        return 'Nombre de la carta… (ej: Blood Crypt)';
+    }
+  }
+
   buscar(page: number) {
-    if (this.nombre().trim().length < 2) return;
+    if (!this.puedeBuscar()) return;
+    const { nombre, numero } = this.terminoYNumero();
     this.cargando.set(true);
     this.abierta.set(null);
-    this.admin.buscarCartas(this.nombre().trim(), this.set(), page).subscribe({
+    this.admin.buscarCartas(nombre, this.set(), numero, this.tipo(), page).subscribe({
       next: (pagina) => { this.resultados.set(pagina); this.cargando.set(false); },
       error: () => this.cargando.set(false)
     });

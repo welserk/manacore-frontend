@@ -2,11 +2,12 @@
 // HEADER: la barra superior de toda la tienda.
 // Logo circular + nombre en la tipografia de la marca + navegacion.
 // ============================================================
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { CarritoService } from '../core/carrito.service';
 import { AuthService } from '../core/auth.service';
 import { CatalogoService } from '../core/catalogo.service';
+import { AdminService } from '../core/admin.service';
 import { CatalogoTile } from '../core/modelos';
 
 @Component({
@@ -82,9 +83,30 @@ import { CatalogoTile } from '../core/modelos';
         </button>
         <!-- Si hay sesion: nombre (lleva a Mi cuenta) + salir. Si no: Ingresar. -->
         @if (auth.logueado()) {
-          <!-- El acceso al panel solo se muestra al ADMIN -->
+          <!-- Menu del ADMIN: desplegable con las secciones del panel
+               y el numerito de ofertas de coleccion pendientes -->
           @if (auth.sesion()?.rol === 'ADMIN') {
-            <a routerLink="/manacore-panel" class="btn-fantasma btn-chico">⚙ Panel</a>
+            <div class="menu-admin">
+              <button class="btn-fantasma btn-chico"
+                      (click)="menuAdmin.set(!menuAdmin())">
+                ⚙ Panel ▾
+                @if (ofertasPendientes() > 0) {
+                  <span class="notificacion">{{ ofertasPendientes() }}</span>
+                }
+              </button>
+              @if (menuAdmin()) {
+                <div class="menu-desplegable">
+                  <a routerLink="/manacore-panel" (click)="menuAdmin.set(false)">🃏 Inventario</a>
+                  <a routerLink="/manacore-panel/pedidos" (click)="menuAdmin.set(false)">📦 Pedidos</a>
+                  <a routerLink="/manacore-panel/ofertas" (click)="menuAdmin.set(false)">
+                    💰 Venta de colecciones
+                    @if (ofertasPendientes() > 0) {
+                      <span class="notificacion">{{ ofertasPendientes() }}</span>
+                    }
+                  </a>
+                </div>
+              }
+            </div>
           }
           <a routerLink="/cuenta" class="usuario-nombre" title="Mi cuenta">👤 {{ auth.nombre() }}</a>
           <button class="btn-fantasma btn-chico" (click)="salir()">Salir</button>
@@ -298,6 +320,53 @@ import { CatalogoTile } from '../core/modelos';
       font-size: 0.85rem;
     }
 
+    /* Menu desplegable del admin */
+    .menu-admin { position: relative; }
+    .menu-desplegable {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      display: flex;
+      flex-direction: column;
+      min-width: 230px;
+      background: rgba(14, 14, 17, 0.98);
+      border: 1px solid var(--dorado-oscuro);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      z-index: 300;
+    }
+    .menu-desplegable a {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.65rem 1rem;
+      color: var(--texto-suave);
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: background 0.12s, color 0.12s;
+    }
+    .menu-desplegable a:hover {
+      background: rgba(212, 175, 55, 0.1);
+      color: var(--dorado);
+    }
+    /* El numerito rojo de pendientes */
+    .notificacion {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      background: #d3202a;
+      color: #fff;
+      border-radius: 9px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      margin-left: 0.4rem;
+    }
+
     /* Nombre del usuario logueado (enlace a Mi cuenta) */
     .usuario-nombre {
       color: var(--dorado);
@@ -348,8 +417,28 @@ import { CatalogoTile } from '../core/modelos';
 export class Header {
   private router = inject(Router);
   private catalogo = inject(CatalogoService);
+  private adminSrv = inject(AdminService);
   carrito = inject(CarritoService);
   auth = inject(AuthService);
+
+  // Menu del panel (solo ADMIN) + numerito de ofertas pendientes
+  menuAdmin = signal(false);
+  ofertasPendientes = signal(0);
+
+  constructor() {
+    // Cuando hay sesion de ADMIN se consulta cuantas ofertas de
+    // coleccion estan PENDIENTES (el numerito rojo del menu)
+    effect(() => {
+      if (this.auth.sesion()?.rol === 'ADMIN') {
+        this.adminSrv.getOfertas('PENDIENTE').subscribe({
+          next: (lista) => this.ofertasPendientes.set(lista.length),
+          error: () => this.ofertasPendientes.set(0)
+        });
+      } else {
+        this.ofertasPendientes.set(0);
+      }
+    });
+  }
 
   // Sugerencias del buscador: max 5 VARIANTES del catalogo con stock
   // (la misma carta puede aparecer varias veces: arte alterno, foil...)

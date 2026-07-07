@@ -12,8 +12,24 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_URL } from './catalogo.service';
-import { Card, CardVariant, Pagina } from './modelos';
+import { Card, CardVariant, MtgSet, Pagina } from './modelos';
 import { Pedido } from './pedido.service';
+import { OfertaColeccion } from './coleccion.service';
+
+// La seccion del buscador del panel (pestañas del inventario)
+export type TipoBusqueda = 'cartas' | 'basicas' | 'tokens' | 'todas';
+
+// Una oferta vista por el ADMIN: incluye al vendedor y las notas internas
+export interface OfertaAdmin extends OfertaColeccion {
+  adminNotes: string | null;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string | null;
+    city: string | null;
+  };
+}
 
 const PANEL = `${API_URL}/manacore-panel/api`;
 
@@ -30,14 +46,26 @@ export class AdminService {
   private http = inject(HttpClient);
 
   // Buscador sobre TODO el censo (paginado: con 95k cartas es
-  // obligatorio; el backend limita el tamano de pagina)
-  buscarCartas(nombre: string, set: string, page: number, size = 20): Observable<Pagina<Card>> {
+  // obligatorio). tipo = la pestaña del panel (cartas/basicas/tokens);
+  // numero = numero de coleccionista ("Island 234" -> numero 234)
+  buscarCartas(nombre: string, set: string, numero: string, tipo: TipoBusqueda,
+               page: number, size = 20): Observable<Pagina<Card>> {
     let params = new HttpParams()
       .set('nombre', nombre)
+      .set('numero', numero)
+      .set('tipo', tipo)
       .set('page', page)
       .set('size', size);
     if (set.trim()) params = params.set('set', set.trim());
     return this.http.get<Pagina<Card>>(`${PANEL}/cartas/buscar`, { params });
+  }
+
+  // Los sets donde existe lo buscado: el desplegable de sets se adapta
+  // a lo que escribas (ej: "hallowed fountain" -> solo sus expansiones)
+  setsDeBusqueda(nombre: string, tipo: TipoBusqueda): Observable<MtgSet[]> {
+    return this.http.get<MtgSet[]>(`${PANEL}/cartas/sets-de`, {
+      params: { nombre, tipo }
+    });
   }
 
   // Las variantes fisicas de una carta (acabado + idioma + stock)
@@ -91,5 +119,20 @@ export class AdminService {
   // Marca un pedido enviado como ENTREGADO
   entregarPedido(orderNumber: string): Observable<Pedido> {
     return this.http.put<Pedido>(`${PANEL}/pedidos/entregar`, { orderNumber });
+  }
+
+  // --- Ofertas de coleccion (vender coleccion) ---
+
+  // Todas las ofertas, o solo las de un estado (ej: PENDIENTE para
+  // el numerito de notificaciones del menu de admin)
+  getOfertas(estado?: string): Observable<OfertaAdmin[]> {
+    const params = estado ? new HttpParams().set('estado', estado) : undefined;
+    return this.http.get<OfertaAdmin[]>(`${PANEL}/ofertas-coleccion`, { params });
+  }
+
+  // Cambia el estado de una oferta y/o guarda notas internas
+  actualizarOferta(id: number, estado: string, notas: string): Observable<OfertaAdmin> {
+    return this.http.put<OfertaAdmin>(`${PANEL}/ofertas-coleccion/${id}`,
+      { estado, notas });
   }
 }

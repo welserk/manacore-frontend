@@ -126,6 +126,22 @@ export const routes: Routes = [
     title: 'Panel · Pedidos — ManaCore TCG'
   },
 
+  // Panel de administracion — la pagina propia de UN pedido
+  {
+    path: 'manacore-panel/pedidos/:id',
+    canActivate: [soloAdmin],
+    loadComponent: () => import('./pages/admin/pedido-detalle-admin').then(m => m.AdminPedidoDetalle),
+    title: 'Panel · Pedido — ManaCore TCG'
+  },
+
+  // Panel de administracion — Ofertas de coleccion (vender coleccion)
+  {
+    path: 'manacore-panel/ofertas',
+    canActivate: [soloAdmin],
+    loadComponent: () => import('./pages/admin/ofertas-admin').then(m => m.AdminOfertas),
+    title: 'Panel · Ofertas — ManaCore TCG'
+  },
+
   // Mi cuenta: perfil y direccion de envio (requiere sesion)
   {
     path: 'cuenta',
