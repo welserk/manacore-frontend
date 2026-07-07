@@ -1,13 +1,18 @@
 // ============================================================
 // PANEL ADMIN — PEDIDOS
 // La bandeja de despacho de la tienda. Dos vistas:
-//   - POR DESPACHAR: pedidos PAGADOS esperando envio (el trabajo
-//     del dia). Cada uno tiene el formulario de despacho:
-//     transportadora + numero de guia + foto/PDF de la guia.
-//     Al despachar, el backend envia el CORREO al cliente y
-//     devuelve un link de WhatsApp con el mensaje ya escrito.
-//   - TODOS: el historial completo de pedidos de la tienda.
-// Los pedidos ENVIADOS se pueden marcar como ENTREGADOS.
+//   - POR DESPACHAR: pedidos PAGADOS esperando envio
+//   - TODOS: el historial completo
+//
+// La lista es COMPACTA (numero + persona + ciudad + estado):
+// van a existir pedidos con muchas cartas y verlo todo de una
+// haria la pagina eterna. Clic en un pedido -> se abre el detalle
+// con las cartas (CON SU IMAGEN, para que quien empaca las
+// encuentre facil), direccion, notas y las acciones:
+//   - PAGADO: formulario de despacho (transportadora + guia +
+//     foto/PDF). Al despachar sale el correo al cliente y aparece
+//     el boton de WhatsApp con el mensaje ya escrito.
+//   - ENVIADO: boton "Marcar como entregado".
 // ============================================================
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
@@ -19,7 +24,7 @@ import { API_URL } from '../../core/catalogo.service';
 // Insignias de estado (mismas de "Mis pedidos" del cliente)
 const ESTADOS: Record<string, { texto: string; color: string }> = {
   AWAITING_PAYMENT: { texto: 'Esperando pago', color: '#d4af37' },
-  PAID:             { texto: 'Pagado — por despachar', color: '#52c98a' },
+  PAID:             { texto: 'Por despachar',  color: '#52c98a' },
   SHIPPED:          { texto: 'Enviado',        color: '#5aa9e8' },
   DELIVERED:        { texto: 'Entregado',      color: '#00733e' },
   CANCELLED:        { texto: 'Cancelado',      color: '#d3202a' }
@@ -67,95 +72,115 @@ const TRANSPORTADORAS = ['Envia', 'Servientrega', 'Interrapidisimo'];
         @for (pedido of pedidos(); track pedido.id) {
           <div class="panel pedido">
 
-            <!-- Encabezado: numero + fecha + estado -->
-            <div class="cabecera">
-              <div>
+            <!-- ======= FILA COMPACTA (clic para abrir el detalle) ======= -->
+            <div class="fila-compacta" (click)="alternar(pedido)">
+              <div class="resumen-izq">
                 <span class="numero">{{ pedido.orderNumber }}</span>
-                <span class="fecha">{{ fecha(pedido.createdAt) }}</span>
-              </div>
-              <span class="insignia" [style.--color-estado]="estado(pedido).color">
-                {{ estado(pedido).texto }}
-              </span>
-            </div>
-
-            <!-- El cliente y a donde va -->
-            @if (pedido.user) {
-              <p class="cliente">
-                👤 <strong>{{ pedido.user.name }}</strong>
-                · {{ pedido.user.email }}
-                @if (pedido.user.phone) { · 📱 {{ pedido.user.phone }} }
-              </p>
-            }
-            <p class="direccion">📍 {{ pedido.shippingAddress }} — {{ pedido.shippingCity }}</p>
-            @if (pedido.notes) { <p class="notas">📝 {{ pedido.notes }}</p> }
-
-            <!-- Las cartas -->
-            @for (item of pedido.items; track item.id) {
-              <div class="linea">
-                <span>{{ item.quantity }}× {{ item.variant.card.name }}
-                  <em>({{ item.variant.finish }} · {{ item.variant.language.toUpperCase() }})</em>
+                <span class="quien">
+                  {{ pedido.user?.name ?? 'Cliente' }} · {{ pedido.shippingCity }}
                 </span>
-                <span class="precio">{{ formato(item.subtotal) }}</span>
               </div>
-            }
-            <div class="linea total">
-              <span>Total (envío {{ pedido.shippingCost > 0 ? formato(pedido.shippingCost) : 'gratis' }})</span>
-              <span class="precio">{{ formato(pedido.totalCop) }}</span>
+              <div class="resumen-der">
+                <span class="insignia" [style.--color-estado]="estado(pedido).color">
+                  {{ estado(pedido).texto }}
+                </span>
+                <span class="expandir">{{ abierto() === pedido.id ? '▲' : '▼' }}</span>
+              </div>
             </div>
 
-            <!-- Rastreo si ya fue despachado -->
-            @if (pedido.trackingNumber) {
-              <p class="rastreo">🚚 {{ pedido.shippingCarrier }} — guía {{ pedido.trackingNumber }}
-                @if (pedido.guideFilePath) {
-                  · <a [href]="urlGuia(pedido)" target="_blank">Ver guía</a>
+            <!-- ======= DETALLE (expandible) ======= -->
+            @if (abierto() === pedido.id) {
+              <div class="detalle">
+                <p class="dato">🗓 {{ fecha(pedido.createdAt) }}</p>
+                @if (pedido.user) {
+                  <p class="dato">👤 <strong>{{ pedido.user.name }}</strong>
+                    · {{ pedido.user.email }}
+                    @if (pedido.user.phone) { · 📱 {{ pedido.user.phone }} }
+                  </p>
                 }
-              </p>
-            }
+                <p class="dato">📍 {{ pedido.shippingAddress }} — {{ pedido.shippingCity }}</p>
+                @if (pedido.notes) { <p class="dato">📝 {{ pedido.notes }}</p> }
 
-            @if (errorAccion() && accionEn() === pedido.orderNumber) {
-              <p class="error">{{ errorAccion() }}</p>
-            }
-
-            <!-- ============ DESPACHAR (solo pedidos PAGADOS) ============ -->
-            @if (pedido.status === 'PAID') {
-              <div class="despacho">
-                <select [ngModel]="transportadora()" (ngModelChange)="transportadora.set($event)"
-                        [ngModelOptions]="{ standalone: true }">
-                  <option value="" disabled>Transportadora…</option>
-                  @for (t of transportadoras; track t) {
-                    <option [value]="t">{{ t }}</option>
+                <!-- Las cartas del pedido, CON IMAGEN: quien empaca las
+                     reconoce de una (arte alterno, foil, idioma...) -->
+                <div class="items">
+                  @for (item of pedido.items; track item.id) {
+                    <div class="item">
+                      @if (item.variant.card.imageUrl) {
+                        <img [src]="item.variant.card.imageUrl" alt=""
+                             class="item-img" loading="lazy">
+                      }
+                      <div class="item-info">
+                        <span class="item-nombre">{{ item.quantity }}× {{ item.variant.card.name }}</span>
+                        <em>{{ item.variant.card.mtgSet.name }}
+                          · {{ item.variant.finish }}
+                          · {{ item.variant.language.toUpperCase() }}</em>
+                      </div>
+                      <span class="precio">{{ formato(item.subtotal) }}</span>
+                    </div>
                   }
-                </select>
-                <input type="text" class="campo-guia" placeholder="Número de guía"
-                       [ngModel]="guia()" (ngModelChange)="guia.set($event)"
-                       [ngModelOptions]="{ standalone: true }">
-                <input type="file" accept="image/*,.pdf"
-                       (change)="elegirArchivoGuia($event)">
-                <button class="btn-dorado btn-despachar"
-                        [disabled]="accionEn() === pedido.orderNumber || !transportadora() || !guia().trim()"
-                        (click)="despachar(pedido)">
-                  {{ accionEn() === pedido.orderNumber ? 'Despachando…' : '🚚 Despachar' }}
-                </button>
-              </div>
-            }
+                </div>
 
-            <!-- WhatsApp listo tras despachar -->
-            @if (whatsappDe() === pedido.orderNumber && whatsappLink()) {
-              <div class="post-despacho">
-                <p class="aviso">Despachado ✔ — el correo al cliente ya salió.</p>
-                <a [href]="whatsappLink()" target="_blank" class="btn-dorado btn-whatsapp">
-                  📱 Avisar por WhatsApp
-                </a>
-              </div>
-            }
+                <div class="linea total">
+                  <span>Total (envío {{ pedido.shippingCost > 0 ? formato(pedido.shippingCost) : 'gratis' }})</span>
+                  <span class="precio">{{ formato(pedido.totalCop) }}</span>
+                </div>
 
-            <!-- ============ ENTREGAR (solo pedidos ENVIADOS) ============ -->
-            @if (pedido.status === 'SHIPPED') {
-              <button class="btn-fantasma btn-entregar"
-                      [disabled]="accionEn() === pedido.orderNumber"
-                      (click)="entregar(pedido)">
-                {{ accionEn() === pedido.orderNumber ? '…' : '✔ Marcar como entregado' }}
-              </button>
+                <!-- Rastreo si ya fue despachado -->
+                @if (pedido.trackingNumber) {
+                  <p class="dato">🚚 {{ pedido.shippingCarrier }} — guía {{ pedido.trackingNumber }}
+                    @if (pedido.guideFilePath) {
+                      · <a [href]="urlGuia(pedido)" target="_blank">Ver guía</a>
+                    }
+                  </p>
+                }
+
+                @if (errorAccion() && accionEn() === pedido.orderNumber) {
+                  <p class="error">{{ errorAccion() }}</p>
+                }
+
+                <!-- ====== DESPACHAR (solo pedidos PAGADOS) ====== -->
+                @if (pedido.status === 'PAID') {
+                  <div class="despacho">
+                    <select [ngModel]="transportadora()" (ngModelChange)="transportadora.set($event)"
+                            [ngModelOptions]="{ standalone: true }">
+                      <option value="" disabled>Transportadora…</option>
+                      @for (t of transportadoras; track t) {
+                        <option [value]="t">{{ t }}</option>
+                      }
+                    </select>
+                    <input type="text" class="campo-guia" placeholder="Número de guía"
+                           [ngModel]="guia()" (ngModelChange)="guia.set($event)"
+                           [ngModelOptions]="{ standalone: true }">
+                    <input type="file" accept="image/*,.pdf"
+                           (change)="elegirArchivoGuia($event)">
+                    <button class="btn-dorado btn-despachar"
+                            [disabled]="accionEn() === pedido.orderNumber || !transportadora() || !guia().trim()"
+                            (click)="despachar(pedido)">
+                      {{ accionEn() === pedido.orderNumber ? 'Despachando…' : '🚚 Despachar' }}
+                    </button>
+                  </div>
+                }
+
+                <!-- WhatsApp listo tras despachar -->
+                @if (whatsappDe() === pedido.orderNumber && whatsappLink()) {
+                  <div class="post-despacho">
+                    <p class="aviso">Despachado ✔ — el correo al cliente ya salió.</p>
+                    <a [href]="whatsappLink()" target="_blank" class="btn-dorado btn-whatsapp">
+                      📱 Avisar por WhatsApp
+                    </a>
+                  </div>
+                }
+
+                <!-- ====== ENTREGAR (solo pedidos ENVIADOS) ====== -->
+                @if (pedido.status === 'SHIPPED') {
+                  <button class="btn-fantasma btn-entregar"
+                          [disabled]="accionEn() === pedido.orderNumber"
+                          (click)="entregar(pedido)">
+                    {{ accionEn() === pedido.orderNumber ? '…' : '✔ Marcar como entregado' }}
+                  </button>
+                }
+              </div>
             }
           </div>
         }
@@ -216,21 +241,44 @@ const TRANSPORTADORAS = ['Envia', 'Servientrega', 'Interrapidisimo'];
 
     .vacio { color: var(--texto-suave); padding: 2rem 0; text-align: center; }
 
-    .pedido { padding: 1.2rem 1.4rem; margin-bottom: 1.1rem; }
-    .cabecera {
+    .pedido { margin-bottom: 0.8rem; overflow: hidden; }
+
+    /* Fila compacta */
+    .fila-compacta {
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 1rem;
-      margin-bottom: 0.7rem;
+      padding: 0.85rem 1.2rem;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .fila-compacta:hover { background: rgba(212, 175, 55, 0.05); }
+    .resumen-izq {
+      display: flex;
+      align-items: baseline;
+      gap: 0.9rem;
+      overflow: hidden;
     }
     .numero {
       font-family: var(--fuente-titulos);
       font-weight: 700;
       color: var(--dorado);
-      margin-right: 0.8rem;
+      white-space: nowrap;
     }
-    .fecha { color: var(--texto-suave); font-size: 0.82rem; }
+    .quien {
+      color: var(--texto-suave);
+      font-size: 0.88rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .resumen-der {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      flex-shrink: 0;
+    }
     .insignia {
       border: 1px solid var(--color-estado);
       color: var(--color-estado);
@@ -240,31 +288,61 @@ const TRANSPORTADORAS = ['Envia', 'Servientrega', 'Interrapidisimo'];
       font-weight: 700;
       white-space: nowrap;
     }
+    .expandir { color: var(--texto-suave); font-size: 0.75rem; }
 
-    .cliente, .direccion, .notas {
+    /* Detalle expandible */
+    .detalle {
+      border-top: 1px solid var(--negro-borde);
+      padding: 1rem 1.2rem 1.2rem;
+    }
+    .dato {
       font-size: 0.86rem;
       color: var(--texto-suave);
       margin-bottom: 0.3rem;
     }
-    .cliente strong { color: var(--texto); }
+    .dato strong { color: var(--texto); }
+
+    /* Items con imagen de la carta */
+    .items { margin-top: 0.8rem; }
+    .item {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      padding: 0.45rem 0;
+      border-top: 1px solid var(--negro-borde);
+    }
+    .item-img {
+      width: 58px;
+      border-radius: 5px;
+      flex-shrink: 0;
+    }
+    .item-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow: hidden;
+    }
+    .item-nombre { font-size: 0.9rem; font-weight: 600; color: var(--texto); }
+    .item-info em {
+      color: var(--texto-suave);
+      font-style: normal;
+      font-size: 0.76rem;
+    }
+    .precio { color: var(--dorado); font-weight: 600; white-space: nowrap; }
 
     .linea {
       display: flex;
       justify-content: space-between;
       gap: 1rem;
-      padding: 0.3rem 0;
-      font-size: 0.88rem;
+      font-size: 0.9rem;
     }
-    .linea em { color: var(--texto-suave); font-style: normal; font-size: 0.76rem; }
-    .precio { color: var(--dorado); font-weight: 600; white-space: nowrap; }
     .linea.total {
       font-family: var(--fuente-titulos);
       border-top: 1px solid var(--negro-borde);
       margin-top: 0.4rem;
-      padding-top: 0.6rem;
+      padding-top: 0.7rem;
     }
-
-    .rastreo { font-size: 0.85rem; color: var(--texto-suave); margin-top: 0.5rem; }
 
     /* Formulario de despacho */
     .despacho {
@@ -332,8 +410,10 @@ export class AdminPedidos {
   vista = signal<'pendientes' | 'todos'>('pendientes');
   pedidos = signal<Pedido[]>([]);
   cargando = signal(true);
+  // Pedido con el detalle abierto (null = todos plegados)
+  abierto = signal<number | null>(null);
 
-  // Formulario de despacho (uno a la vez: el del pedido que se este llenando)
+  // Formulario de despacho (uno a la vez: el del pedido abierto)
   transportadora = signal('');
   guia = signal('');
   archivoGuia = signal<File | null>(null);
@@ -350,7 +430,22 @@ export class AdminPedidos {
 
   cambiarVista(v: 'pendientes' | 'todos') {
     this.vista.set(v);
+    this.abierto.set(null);
     this.cargar();
+  }
+
+  // Abre/cierra el detalle de un pedido (y limpia el formulario
+  // de despacho para no arrastrar datos de otro pedido)
+  alternar(pedido: Pedido) {
+    if (this.abierto() === pedido.id) {
+      this.abierto.set(null);
+      return;
+    }
+    this.abierto.set(pedido.id);
+    this.errorAccion.set('');
+    this.transportadora.set('');
+    this.guia.set('');
+    this.archivoGuia.set(null);
   }
 
   private cargar() {

@@ -113,12 +113,19 @@ interface FilaVariante {
                           <td>{{ nombreIdioma(fila.language) }}</td>
                           <td class="precio">{{ formato(precioFila(carta, fila)) }}</td>
                           <td>
-                            <!-- El input edita una COPIA local; el stock real
-                                 solo cambia al presionar Guardar -->
-                            <input type="number" min="0" class="stock-input"
-                                   [ngModel]="stockDeFila(fila)"
-                                   (ngModelChange)="editarFila(fila, $event)"
-                                   [ngModelOptions]="{ standalone: true }">
+                            <!-- Stepper − / +: mas comodo que las flechitas del
+                                 navegador. El input edita una COPIA local; el
+                                 stock real solo cambia al presionar Guardar -->
+                            <div class="stepper">
+                              <button type="button" class="paso"
+                                      (click)="ajustarFila(fila, -1)">−</button>
+                              <input type="number" min="0" class="stock-input"
+                                     [ngModel]="stockDeFila(fila)"
+                                     (ngModelChange)="editarFila(fila, $event)"
+                                     [ngModelOptions]="{ standalone: true }">
+                              <button type="button" class="paso"
+                                      (click)="ajustarFila(fila, 1)">＋</button>
+                            </div>
                           </td>
                           <td class="acciones-fila">
                             <button class="btn-fantasma btn-mini"
@@ -157,9 +164,13 @@ interface FilaVariante {
                         <option [value]="codigo">{{ nombreIdioma(codigo) }}</option>
                       }
                     </select>
-                    <input type="number" min="0" class="stock-input" placeholder="stock"
-                           [ngModel]="nvStock()" (ngModelChange)="nvStock.set($event)"
-                           [ngModelOptions]="{ standalone: true }">
+                    <div class="stepper">
+                      <button type="button" class="paso" (click)="ajustarNvStock(-1)">−</button>
+                      <input type="number" min="0" class="stock-input" placeholder="stock"
+                             [ngModel]="nvStock()" (ngModelChange)="nvStock.set($event)"
+                             [ngModelOptions]="{ standalone: true }">
+                      <button type="button" class="paso" (click)="ajustarNvStock(1)">＋</button>
+                    </div>
                     <button class="btn-fantasma btn-mini"
                             [disabled]="creandoVariante() || !nvIdioma()"
                             (click)="crearVariante(carta)">
@@ -311,16 +322,50 @@ interface FilaVariante {
     td { padding: 0.4rem 0.6rem; border-top: 1px solid var(--negro-borde); }
     td em { color: var(--texto-suave); font-style: normal; font-size: 0.75rem; }
     .precio { color: var(--dorado); font-weight: 600; }
+    /* Stepper − [cantidad] + */
+    .stepper {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .paso {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--negro);
+      border: 1px solid var(--dorado-oscuro);
+      border-radius: 6px;
+      color: var(--dorado);
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .paso:hover {
+      background: rgba(212, 175, 55, 0.12);
+      border-color: var(--dorado);
+    }
     .stock-input {
-      width: 76px;
+      width: 56px;
       box-sizing: border-box;
       background: var(--negro);
       border: 1px solid var(--negro-borde);
       border-radius: 6px;
       color: var(--texto);
       font-family: var(--fuente-cuerpo);
-      padding: 0.35rem 0.5rem;
+      text-align: center;
+      padding: 0.35rem 0.4rem;
       outline: none;
+      /* Sin las flechitas nativas del navegador: el stepper las reemplaza */
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+    .stock-input::-webkit-outer-spin-button,
+    .stock-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
     }
     .stock-input:focus { border-color: var(--dorado); }
     .btn-mini { padding: 0.35rem 0.8rem; font-size: 0.78rem; }
@@ -489,6 +534,16 @@ export class AdminInventario {
 
   editarFila(fila: FilaVariante, valor: number) {
     this.stockEditado.update(m => ({ ...m, [this.clave(fila)]: valor }));
+  }
+
+  // Botones − / + del stepper: suman o restan 1 sin bajar de 0
+  ajustarFila(fila: FilaVariante, delta: number) {
+    const actual = Number(this.stockDeFila(fila)) || 0;
+    this.editarFila(fila, Math.max(0, actual + delta));
+  }
+
+  ajustarNvStock(delta: number) {
+    this.nvStock.set(Math.max(0, (Number(this.nvStock()) || 0) + delta));
   }
 
   // Guardar se habilita solo si hay un cambio valido que aplicar
