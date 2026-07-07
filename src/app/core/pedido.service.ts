@@ -76,6 +76,15 @@ export interface Pedido {
   paidAt: string | null;
   shippedAt: string | null;
   items: ItemDePedido[];
+  // El cliente del pedido: lo usa el PANEL ADMIN (en "mis pedidos"
+  // no hace falta porque el cliente ya sabe quien es)
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string | null;
+    city: string | null;
+  };
 }
 
 @Injectable({ providedIn: 'root' })

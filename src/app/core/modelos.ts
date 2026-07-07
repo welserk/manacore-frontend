@@ -76,6 +76,29 @@ export interface CatalogoTile {
   stockTotal: number;
 }
 
+// Los idiomas en que Scryfall imprime cartas, con su nombre en
+// español. Se usa en el detalle de carta y en el panel admin
+// (selector de idioma al crear variantes).
+export const NOMBRES_IDIOMA: Record<string, string> = {
+  en: 'Inglés',
+  es: 'Español',
+  fr: 'Francés',
+  de: 'Alemán',
+  it: 'Italiano',
+  pt: 'Portugués',
+  ja: 'Japonés',
+  ko: 'Coreano',
+  ru: 'Ruso',
+  zhs: 'Chino simplificado',
+  zht: 'Chino tradicional',
+  he: 'Hebreo',
+  la: 'Latín',
+  grc: 'Griego antiguo',
+  ar: 'Árabe',
+  sa: 'Sánscrito',
+  ph: 'Phyrexiano'
+};
+
 // Respuesta paginada de Spring (para el buscador admin)
 export interface Pagina<T> {
   content: T[];

@@ -118,6 +118,14 @@ export const routes: Routes = [
     title: 'Panel — ManaCore TCG'
   },
 
+  // Panel de administracion — Pedidos (despachar y entregar)
+  {
+    path: 'manacore-panel/pedidos',
+    canActivate: [soloAdmin],
+    loadComponent: () => import('./pages/admin/pedidos-admin').then(m => m.AdminPedidos),
+    title: 'Panel · Pedidos — ManaCore TCG'
+  },
+
   // Mi cuenta: perfil y direccion de envio (requiere sesion)
   {
     path: 'cuenta',

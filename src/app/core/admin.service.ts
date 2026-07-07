@@ -13,8 +13,16 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_URL } from './catalogo.service';
 import { Card, CardVariant, Pagina } from './modelos';
+import { Pedido } from './pedido.service';
 
 const PANEL = `${API_URL}/manacore-panel/api`;
+
+// Respuesta al despachar: el pedido actualizado + el link de WhatsApp
+// con el mensaje de despacho ya escrito (un clic y se abre el chat)
+export interface RespuestaDespacho {
+  pedido: Pedido;
+  whatsappLink: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class AdminService {
@@ -47,5 +55,41 @@ export class AdminService {
   agregarVariante(cardId: number, finish: string, language: string, stock: number): Observable<CardVariant> {
     return this.http.post<CardVariant>(`${PANEL}/cartas/${cardId}/variantes`,
       { finish, language, stock });
+  }
+
+  // Eliminar una variante agregada por error. El backend la protege:
+  // si tiene ventas historicas, responde error (dejarla en stock 0).
+  eliminarVariante(variantId: number): Observable<{ mensaje: string }> {
+    return this.http.delete<{ mensaje: string }>(`${PANEL}/variantes/${variantId}`);
+  }
+
+  // --- Pedidos ---
+
+  // Pagados y pendientes de despachar (la bandeja de trabajo diaria)
+  pedidosPendientes(): Observable<Pedido[]> {
+    return this.http.get<Pedido[]>(`${PANEL}/pedidos/pendientes`);
+  }
+
+  // Historial completo de pedidos de la tienda
+  todosPedidos(): Observable<Pedido[]> {
+    return this.http.get<Pedido[]>(`${PANEL}/pedidos/todos`);
+  }
+
+  // Despacha un pedido: guia + transportadora + foto/PDF opcional de
+  // la guia. Va como FormData (multipart) por el archivo. El backend
+  // ademas envia el CORREO al cliente y devuelve el link de WhatsApp.
+  enviarPedido(orderNumber: string, trackingNumber: string, carrier: string,
+               guia: File | null): Observable<RespuestaDespacho> {
+    const datos = new FormData();
+    datos.append('orderNumber', orderNumber);
+    datos.append('trackingNumber', trackingNumber);
+    datos.append('carrier', carrier);
+    if (guia) datos.append('guia', guia);
+    return this.http.post<RespuestaDespacho>(`${PANEL}/pedidos/enviar`, datos);
+  }
+
+  // Marca un pedido enviado como ENTREGADO
+  entregarPedido(orderNumber: string): Observable<Pedido> {
+    return this.http.put<Pedido>(`${PANEL}/pedidos/entregar`, { orderNumber });
   }
 }

@@ -6,24 +6,47 @@
 //      stock 0 y tokens — a diferencia del catalogo publico)
 //   2. Abrir sus variantes (acabado + idioma)
 //   3. Subirle stock a la variante exacta que llego
-//   4. Si la variante no existe (ej: llego en español y solo
-//      estaba la inglesa), crearla ahi mismo
+//
+// Las combinaciones BASE (Normal y Foil, en Ingles y Español)
+// aparecen SIEMPRE en la tabla aunque no existan en la base de
+// datos todavia: se muestran con stock 0 y, al guardar un stock,
+// la variante se crea sola. Otros idiomas o acabados (etched) se
+// agregan con el selector de "Variante nueva".
 // Solo entra el rol ADMIN (guardia en la ruta + backend).
 // ============================================================
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AdminService } from '../../core/admin.service';
-import { Card, CardVariant, Pagina } from '../../core/modelos';
+import { Card, CardVariant, NOMBRES_IDIOMA, Pagina } from '../../core/modelos';
+
+// Una fila de la tabla de variantes. Puede ser:
+//  - real:    existe en la base de datos (variante con ID)
+//  - virtual: combinacion base que aun no existe (variante = null);
+//             se crea automaticamente al guardarle un stock
+interface FilaVariante {
+  variante: CardVariant | null;
+  finish: string;
+  language: string;
+}
 
 @Component({
   selector: 'app-admin-inventario',
-  imports: [FormsModule],
+  imports: [RouterLink, RouterLinkActive, FormsModule],
   template: `
     <!-- Fondo: Saheeli Rai (la artifice: perfecta para el taller del admin) -->
     <section class="inventario fondo-arte"
              style="--arte-fondo: url('https://cards.scryfall.io/art_crop/front/9/4/94b38464-39cd-4ee6-b9bf-a0bc1e128d9a.jpg?1782711513')">
       <p class="miga">PANEL MANACORE</p>
       <h1>Inventario</h1>
+
+      <!-- Navegacion del panel -->
+      <nav class="tabs-panel">
+        <a routerLink="/manacore-panel" [routerLinkActiveOptions]="{ exact: true }"
+           routerLinkActive="activo">Inventario</a>
+        <a routerLink="/manacore-panel/pedidos" routerLinkActive="activo">Pedidos</a>
+      </nav>
+
       <p class="explicacion">
         Busca cualquier carta del censo (incluye las que no tienen stock y los
         tokens), abre sus variantes y sube el stock de la que llegó.
@@ -79,48 +102,66 @@ import { Card, CardVariant, Pagina } from '../../core/modelos';
                       <tr><th>Acabado</th><th>Idioma</th><th>Precio</th><th>Stock</th><th></th></tr>
                     </thead>
                     <tbody>
-                      @for (v of variantes(); track v.id) {
+                      @for (fila of filas(); track clave(fila)) {
                         <tr>
-                          <td>{{ v.finish }}@if (v.specialFoilType) { <em> ({{ v.specialFoilType }})</em> }</td>
-                          <td>{{ v.language.toUpperCase() }}</td>
-                          <td class="precio">{{ formato(precioVariante(carta, v)) }}</td>
+                          <td>
+                            {{ capitalizar(fila.finish) }}
+                            @if (fila.variante?.specialFoilType) {
+                              <em> ({{ fila.variante!.specialFoilType }})</em>
+                            }
+                          </td>
+                          <td>{{ nombreIdioma(fila.language) }}</td>
+                          <td class="precio">{{ formato(precioFila(carta, fila)) }}</td>
                           <td>
                             <!-- El input edita una COPIA local; el stock real
                                  solo cambia al presionar Guardar -->
                             <input type="number" min="0" class="stock-input"
-                                   [ngModel]="stockEditado()[v.id] ?? v.stock"
-                                   (ngModelChange)="editarStock(v.id, $event)"
+                                   [ngModel]="stockDeFila(fila)"
+                                   (ngModelChange)="editarFila(fila, $event)"
                                    [ngModelOptions]="{ standalone: true }">
                           </td>
-                          <td>
+                          <td class="acciones-fila">
                             <button class="btn-fantasma btn-mini"
-                                    [disabled]="guardandoId() === v.id || (stockEditado()[v.id] ?? v.stock) === v.stock"
-                                    (click)="guardarStock(v)">
-                              {{ guardandoId() === v.id ? '…' : 'Guardar' }}
+                                    [disabled]="!puedeGuardar(fila) || guardandoClave() === clave(fila)"
+                                    (click)="guardarFila(carta, fila)">
+                              {{ guardandoClave() === clave(fila) ? '…' : 'Guardar' }}
                             </button>
+                            <!-- Solo las variantes REALES se pueden eliminar
+                                 (las base sin crear no existen todavia) -->
+                            @if (fila.variante) {
+                              <button class="btn-eliminar" title="Eliminar esta variante"
+                                      [disabled]="guardandoClave() === clave(fila)"
+                                      (click)="eliminarFila(fila)">🗑</button>
+                            }
                           </td>
                         </tr>
                       }
                     </tbody>
                   </table>
+                  <p class="nota-base">Normal y Foil en Inglés y Español están siempre
+                    listas: escribe el stock, dale Guardar y la variante se crea sola.</p>
 
-                  <!-- Crear variante nueva (acabado/idioma que no existia) -->
+                  <!-- Otros acabados o idiomas (etched, japones, frances...) -->
                   <div class="nueva-variante">
                     <span class="nueva-titulo">＋ Variante nueva:</span>
                     <select [ngModel]="nvFinish()" (ngModelChange)="nvFinish.set($event)"
                             [ngModelOptions]="{ standalone: true }">
-                      <option value="normal">normal</option>
-                      <option value="foil">foil</option>
-                      <option value="etched">etched</option>
+                      <option value="normal">Normal</option>
+                      <option value="foil">Foil</option>
+                      <option value="etched">Etched</option>
                     </select>
-                    <input type="text" class="campo-idioma" placeholder="idioma (es, en...)"
-                           [ngModel]="nvIdioma()" (ngModelChange)="nvIdioma.set($event)"
-                           [ngModelOptions]="{ standalone: true }">
+                    <select [ngModel]="nvIdioma()" (ngModelChange)="nvIdioma.set($event)"
+                            [ngModelOptions]="{ standalone: true }">
+                      <option value="" disabled>Idioma…</option>
+                      @for (codigo of codigosIdioma; track codigo) {
+                        <option [value]="codigo">{{ nombreIdioma(codigo) }}</option>
+                      }
+                    </select>
                     <input type="number" min="0" class="stock-input" placeholder="stock"
                            [ngModel]="nvStock()" (ngModelChange)="nvStock.set($event)"
                            [ngModelOptions]="{ standalone: true }">
                     <button class="btn-fantasma btn-mini"
-                            [disabled]="creandoVariante() || !nvIdioma().trim()"
+                            [disabled]="creandoVariante() || !nvIdioma()"
                             (click)="crearVariante(carta)">
                       {{ creandoVariante() ? '…' : 'Crear' }}
                     </button>
@@ -157,6 +198,27 @@ import { Card, CardVariant, Pagina } from '../../core/modelos';
       letter-spacing: 0.25em;
     }
     h1 { font-size: 1.7rem; margin: 0.2rem 0 0.8rem; }
+
+    .tabs-panel {
+      display: flex;
+      gap: 0.6rem;
+      margin-bottom: 1.2rem;
+    }
+    .tabs-panel a {
+      padding: 0.45rem 1.2rem;
+      border: 1px solid var(--negro-borde);
+      border-radius: 20px;
+      color: var(--texto-suave);
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+    .tabs-panel a.activo {
+      border-color: var(--dorado);
+      color: var(--dorado);
+      background: rgba(212, 175, 55, 0.08);
+    }
+
     .explicacion {
       color: var(--texto-suave);
       font-size: 0.9rem;
@@ -263,6 +325,26 @@ import { Card, CardVariant, Pagina } from '../../core/modelos';
     .stock-input:focus { border-color: var(--dorado); }
     .btn-mini { padding: 0.35rem 0.8rem; font-size: 0.78rem; }
     .btn-mini:disabled { opacity: 0.4; cursor: not-allowed; }
+    .acciones-fila { white-space: nowrap; }
+    .btn-eliminar {
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      padding: 0.25rem 0.45rem;
+      margin-left: 0.4rem;
+      opacity: 0.6;
+      transition: opacity 0.15s, border-color 0.15s;
+    }
+    .btn-eliminar:hover { opacity: 1; border-color: #d3202a; }
+    .btn-eliminar:disabled { opacity: 0.25; cursor: not-allowed; }
+    .nota-base {
+      color: var(--texto-suave);
+      font-size: 0.76rem;
+      margin-top: 0.6rem;
+      opacity: 0.85;
+    }
 
     .nueva-variante {
       display: flex;
@@ -274,7 +356,7 @@ import { Card, CardVariant, Pagina } from '../../core/modelos';
       flex-wrap: wrap;
     }
     .nueva-titulo { color: var(--texto-suave); font-size: 0.82rem; }
-    .nueva-variante select, .campo-idioma {
+    .nueva-variante select {
       background: var(--negro);
       border: 1px solid var(--negro-borde);
       border-radius: 6px;
@@ -283,7 +365,6 @@ import { Card, CardVariant, Pagina } from '../../core/modelos';
       padding: 0.35rem 0.5rem;
       outline: none;
     }
-    .campo-idioma { width: 130px; box-sizing: border-box; }
 
     .paginacion {
       display: flex;
@@ -317,6 +398,15 @@ export class AdminInventario {
 
   private admin = inject(AdminService);
 
+  // Las combinaciones que SIEMPRE se ofrecen aunque no existan aun
+  // (decision del dueño: Normal y Foil, en Ingles y Español)
+  private static readonly BASE: [string, string][] = [
+    ['normal', 'en'], ['normal', 'es'], ['foil', 'en'], ['foil', 'es']
+  ];
+
+  // Codigos de idioma para el selector de variante nueva
+  codigosIdioma = Object.keys(NOMBRES_IDIOMA);
+
   // Buscador
   nombre = signal('');
   set = signal('');
@@ -328,13 +418,29 @@ export class AdminInventario {
   variantes = signal<CardVariant[]>([]);
   cargandoVariantes = signal(false);
 
-  // Edicion de stock: mapa variantId -> valor escrito (sin guardar aun)
-  stockEditado = signal<Record<number, number>>({});
-  guardandoId = signal<number | null>(null);
+  // Filas de la tabla: variantes reales + combinaciones base faltantes
+  filas = computed<FilaVariante[]>(() => {
+    const reales = this.variantes();
+    const lista: FilaVariante[] = reales.map(v =>
+      ({ variante: v, finish: v.finish, language: v.language }));
+    for (const [finish, language] of AdminInventario.BASE) {
+      const existe = reales.some(v => v.finish === finish && v.language === language);
+      if (!existe) lista.push({ variante: null, finish, language });
+    }
+    // Orden estable: acabado (normal, foil, etched) y luego idioma
+    const orden: Record<string, number> = { normal: 0, foil: 1, etched: 2 };
+    return lista.sort((a, b) =>
+      (orden[a.finish] ?? 9) - (orden[b.finish] ?? 9)
+      || a.language.localeCompare(b.language));
+  });
+
+  // Ediciones de stock sin guardar: clave de fila -> valor escrito
+  stockEditado = signal<Record<string, number>>({});
+  guardandoClave = signal<string | null>(null);
   avisoStock = signal('');
   errorStock = signal('');
 
-  // Variante nueva
+  // Variante nueva (otros acabados/idiomas)
   nvFinish = signal('normal');
   nvIdioma = signal('');
   nvStock = signal(1);
@@ -371,27 +477,86 @@ export class AdminInventario {
     });
   }
 
-  editarStock(variantId: number, valor: number) {
-    this.stockEditado.update(m => ({ ...m, [variantId]: valor }));
+  // Identificador unico de una fila (real: su id; virtual: acabado+idioma)
+  clave(fila: FilaVariante): string {
+    return fila.variante ? `v${fila.variante.id}` : `${fila.finish}|${fila.language}`;
   }
 
-  guardarStock(v: CardVariant) {
-    const nuevo = this.stockEditado()[v.id];
-    if (nuevo == null || nuevo < 0) return;
+  // Lo que muestra el input: lo editado, o el stock real, o 0 si es base
+  stockDeFila(fila: FilaVariante): number {
+    return this.stockEditado()[this.clave(fila)] ?? fila.variante?.stock ?? 0;
+  }
+
+  editarFila(fila: FilaVariante, valor: number) {
+    this.stockEditado.update(m => ({ ...m, [this.clave(fila)]: valor }));
+  }
+
+  // Guardar se habilita solo si hay un cambio valido que aplicar
+  puedeGuardar(fila: FilaVariante): boolean {
+    const valor = this.stockEditado()[this.clave(fila)];
+    if (valor == null || valor < 0) return false;
+    return fila.variante ? valor !== fila.variante.stock : true;
+  }
+
+  // Guarda una fila: si la variante existe cambia su stock; si es una
+  // combinacion base sin crear, LA CREA con ese stock (todo en un boton)
+  guardarFila(carta: Card, fila: FilaVariante) {
+    const stock = this.stockEditado()[this.clave(fila)];
+    if (stock == null || stock < 0) return;
     this.avisoStock.set('');
     this.errorStock.set('');
-    this.guardandoId.set(v.id);
-    this.admin.setStock(v.id, nuevo).subscribe({
-      next: (actualizada) => {
-        // Refresca la fila con la verdad del backend
-        this.variantes.update(lista =>
-          lista.map(x => x.id === actualizada.id ? actualizada : x));
-        this.guardandoId.set(null);
-        this.avisoStock.set(`Stock de ${v.finish} ${v.language.toUpperCase()} actualizado a ${nuevo} ✔`);
+    this.guardandoClave.set(this.clave(fila));
+    const etiqueta = `${this.capitalizar(fila.finish)} ${this.nombreIdioma(fila.language)}`;
+
+    if (fila.variante) {
+      this.admin.setStock(fila.variante.id, stock).subscribe({
+        next: (actualizada) => {
+          this.variantes.update(lista =>
+            lista.map(x => x.id === actualizada.id ? actualizada : x));
+          this.guardandoClave.set(null);
+          this.avisoStock.set(`Stock de ${etiqueta} actualizado a ${stock} ✔`);
+        },
+        error: (e) => {
+          this.guardandoClave.set(null);
+          this.errorStock.set(e.error?.error ?? 'No se pudo actualizar el stock.');
+        }
+      });
+    } else {
+      this.admin.agregarVariante(carta.id, fila.finish, fila.language, stock).subscribe({
+        next: () => {
+          this.guardandoClave.set(null);
+          this.avisoStock.set(`Variante ${etiqueta} creada con stock ${stock} ✔`);
+          this.cargarVariantes(carta.id);
+        },
+        error: (e) => {
+          this.guardandoClave.set(null);
+          this.errorStock.set(e.error?.error ?? 'No se pudo crear la variante.');
+        }
+      });
+    }
+  }
+
+  // Elimina una variante agregada por error (pide confirmacion).
+  // El backend rechaza el borrado si tiene ventas historicas.
+  eliminarFila(fila: FilaVariante) {
+    if (!fila.variante) return;
+    const etiqueta = `${this.capitalizar(fila.finish)} ${this.nombreIdioma(fila.language)}`;
+    if (!confirm(`¿Eliminar la variante ${etiqueta}? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    this.avisoStock.set('');
+    this.errorStock.set('');
+    this.guardandoClave.set(this.clave(fila));
+    const cardId = this.abierta()!;
+    this.admin.eliminarVariante(fila.variante.id).subscribe({
+      next: () => {
+        this.guardandoClave.set(null);
+        this.avisoStock.set(`Variante ${etiqueta} eliminada ✔`);
+        this.cargarVariantes(cardId);
       },
       error: (e) => {
-        this.guardandoId.set(null);
-        this.errorStock.set(e.error?.error ?? 'No se pudo actualizar el stock.');
+        this.guardandoClave.set(null);
+        this.errorStock.set(e.error?.error ?? 'No se pudo eliminar la variante.');
       }
     });
   }
@@ -401,7 +566,7 @@ export class AdminInventario {
     this.errorStock.set('');
     this.creandoVariante.set(true);
     this.admin.agregarVariante(carta.id, this.nvFinish(),
-        this.nvIdioma().trim().toLowerCase(), this.nvStock() || 0).subscribe({
+        this.nvIdioma(), this.nvStock() || 0).subscribe({
       next: () => {
         this.creandoVariante.set(false);
         this.nvIdioma.set('');
@@ -416,15 +581,24 @@ export class AdminInventario {
     });
   }
 
-  // Precio efectivo de una variante: el manual si esta fijado,
-  // si no el del Card segun el acabado (la misma regla del backend)
-  precioVariante(carta: Card, v: CardVariant): number {
-    if (v.manualPriceCop != null) return v.manualPriceCop;
-    switch (v.finish) {
+  // Precio efectivo de una fila: el manual de la variante si esta
+  // fijado, si no el del Card segun el acabado (la regla del backend)
+  precioFila(carta: Card, fila: FilaVariante): number {
+    if (fila.variante?.manualPriceCop != null) return fila.variante.manualPriceCop;
+    switch (fila.finish) {
       case 'foil':   return carta.priceCopFoil ?? 0;
       case 'etched': return carta.priceCopEtched ?? 0;
       default:       return carta.priceCop ?? 0;
     }
+  }
+
+  // "foil" -> "Foil" (peticion del dueño: acabados con mayuscula inicial)
+  capitalizar(texto: string): string {
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+  }
+
+  nombreIdioma(codigo: string): string {
+    return NOMBRES_IDIOMA[codigo] ?? codigo.toUpperCase();
   }
 
   formato(cop: number): string {
