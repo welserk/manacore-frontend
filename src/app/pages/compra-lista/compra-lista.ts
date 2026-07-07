@@ -14,7 +14,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { CatalogoService } from '../../core/catalogo.service';
-import { CatalogoTile } from '../../core/modelos';
+import { CarritoService } from '../../core/carrito.service';
+import { CardVariant, CatalogoTile, NOMBRES_IDIOMA } from '../../core/modelos';
 import { TileCatalogo } from '../../components/tile-catalogo';
 
 // Una linea pedida por el cliente y lo que la tienda tiene de ella
@@ -78,7 +79,27 @@ interface ResultadoLinea {
             @if (linea.tiles.length > 0) {
               <div class="grilla">
                 @for (tile of linea.tiles; track tile.cardId + '-' + tile.finish) {
-                  <app-tile-catalogo [tile]="tile" />
+                  <div class="tile-wrap">
+                    <app-tile-catalogo [tile]="tile" />
+                    <!-- Agregar sin salir de la lista. Si hay un solo idioma
+                         se agrega directo; si hay varios, se eligen aqui mismo -->
+                    @if (pickerKey() === clave(tile)) {
+                      <div class="idiomas">
+                        @for (v of pickerVariantes(); track v.id) {
+                          <button class="chip" (click)="agregarVariante(tile, v)">
+                            {{ nombreIdioma(v.language) }}
+                          </button>
+                        }
+                        <button class="chip cancelar" (click)="pickerKey.set(null)">✕</button>
+                      </div>
+                    } @else {
+                      <button class="btn-agregar"
+                              [disabled]="agregando() === clave(tile)"
+                              (click)="agregar(tile)">
+                        {{ agregando() === clave(tile) ? 'Agregando…' : '＋ Agregar al carrito' }}
+                      </button>
+                    }
+                  </div>
                 }
               </div>
             }
@@ -166,16 +187,109 @@ interface ResultadoLinea {
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
       gap: 1rem;
     }
+    .tile-wrap { display: flex; flex-direction: column; gap: 0.5rem; }
+
+    /* Boton de agregar debajo de cada carta */
+    .btn-agregar {
+      width: 100%;
+      background: rgba(212, 175, 55, 0.1);
+      border: 1px solid var(--dorado-oscuro);
+      border-radius: 8px;
+      color: var(--dorado);
+      font-family: var(--fuente-titulos);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.5rem;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+    .btn-agregar:hover {
+      background: rgba(212, 175, 55, 0.2);
+      box-shadow: 0 0 12px rgba(212, 175, 55, 0.25);
+    }
+    .btn-agregar:disabled { opacity: 0.6; cursor: wait; }
+
+    /* Chips de idioma cuando la carta tiene varios */
+    .idiomas { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .chip {
+      flex: 1;
+      background: var(--negro);
+      border: 1px solid var(--dorado-oscuro);
+      border-radius: 8px;
+      color: var(--texto);
+      font-family: var(--fuente-cuerpo);
+      font-size: 0.78rem;
+      padding: 0.45rem 0.5rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .chip:hover { background: rgba(212, 175, 55, 0.15); border-color: var(--dorado); }
+    .chip.cancelar { flex: 0 0 auto; color: var(--texto-suave); }
   `
 })
 export class CompraLista {
 
   private catalogo = inject(CatalogoService);
+  private carrito = inject(CarritoService);
 
   texto = signal('');
   buscando = signal(false);
   // null = aun no se ha consultado (no mostrar nada abajo)
   resultados = signal<ResultadoLinea[] | null>(null);
+
+  // Estado del boton "Agregar" por tile (clave = cardId-finish):
+  //   agregando  = tile cuyas variantes se estan consultando
+  //   pickerKey  = tile que mostro los idiomas para elegir
+  agregando = signal<string | null>(null);
+  pickerKey = signal<string | null>(null);
+  pickerVariantes = signal<CardVariant[]>([]);
+
+  // Identificador de un tile (carta + acabado)
+  clave(tile: CatalogoTile): string {
+    return tile.cardId + '-' + tile.finish;
+  }
+
+  nombreIdioma(codigo: string): string {
+    return NOMBRES_IDIOMA[codigo] ?? codigo.toUpperCase();
+  }
+
+  // Al pulsar "Agregar": el tile colapsa idiomas, asi que se consultan
+  // las variantes reales de esa carta+acabado con stock. Una sola -> se
+  // agrega directo; varias -> se muestran para que el cliente elija.
+  agregar(tile: CatalogoTile) {
+    this.agregando.set(this.clave(tile));
+    this.pickerKey.set(null);
+    this.catalogo.getVariantes(tile.cardId).subscribe({
+      next: (variantes) => {
+        this.agregando.set(null);
+        const disponibles = variantes.filter(v => v.finish === tile.finish && v.stock > 0);
+        if (disponibles.length === 0) return;      // no deberia pasar (el tile tiene stock)
+        if (disponibles.length === 1) {
+          this.agregarVariante(tile, disponibles[0]);
+        } else {
+          this.pickerVariantes.set(disponibles);
+          this.pickerKey.set(this.clave(tile));
+        }
+      },
+      error: () => this.agregando.set(null)
+    });
+  }
+
+  // Mete la variante exacta al carrito (abre el panel solo, como confirmacion)
+  agregarVariante(tile: CatalogoTile, v: CardVariant) {
+    this.carrito.agregar({
+      variantId: v.id,
+      cardId: tile.cardId,
+      nombre: tile.name,
+      imageUrl: tile.imageUrl,
+      setName: tile.setName,
+      finish: v.finish,
+      language: v.language,
+      precio: tile.precio,
+      stock: v.stock
+    });
+    this.pickerKey.set(null);
+  }
 
   lineasDisponibles = computed(() =>
     (this.resultados() ?? []).filter(l => l.tiles.length > 0).length);
