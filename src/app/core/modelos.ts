@@ -99,6 +99,27 @@ export const NOMBRES_IDIOMA: Record<string, string> = {
   ph: 'Phyrexiano'
 };
 
+// Configuracion de la tienda (entidad StoreConfig del backend).
+// La edita el admin desde el panel de Configuracion.
+export interface StoreConfig {
+  id: number;
+  maintenanceMode: boolean;
+  maintenanceMessage: string | null;
+  storeName: string;
+  storeEmail: string | null;
+  storePhone: string | null;
+  trmReal: number | null;         // TRM oficial (datos.gov.co)
+  trmAdjustment: number | null;   // ajuste manual sumado a la TRM
+  trmManacore: number | null;     // TRM efectiva de la tienda (real + ajuste)
+  trmLastUpdated: string | null;
+  priceFloorLow: number | null;   // piso cartas ≤ $0.50 USD (y tokens normales)
+  priceFloorMid: number | null;   // piso cartas $0.51-$1 USD (y tokens foil)
+  shippingNationalPrice: number | null;
+  shippingLocalPrice: number | null;  // normalmente 0 (ciudad local)
+  localCity: string;              // ciudad con envio gratis (Armenia)
+  rewardThreshold: number | null;
+}
+
 // Respuesta paginada de Spring (para el buscador admin)
 export interface Pagina<T> {
   content: T[];

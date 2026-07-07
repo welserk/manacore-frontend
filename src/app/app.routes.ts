@@ -142,6 +142,14 @@ export const routes: Routes = [
     title: 'Panel · Ofertas — ManaCore TCG'
   },
 
+  // Panel de administracion — Configuracion (TRM, envio, mantenimiento)
+  {
+    path: 'manacore-panel/configuracion',
+    canActivate: [soloAdmin],
+    loadComponent: () => import('./pages/admin/config-admin').then(m => m.AdminConfig),
+    title: 'Panel · Configuración — ManaCore TCG'
+  },
+
   // Mi cuenta: perfil y direccion de envio (requiere sesion)
   {
     path: 'cuenta',

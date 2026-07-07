@@ -46,6 +46,7 @@ interface FilaVariante {
            routerLinkActive="activo">Inventario</a>
         <a routerLink="/manacore-panel/pedidos" routerLinkActive="activo">Pedidos</a>
         <a routerLink="/manacore-panel/ofertas" routerLinkActive="activo">Ofertas</a>
+        <a routerLink="/manacore-panel/configuracion" routerLinkActive="activo">Configuración</a>
       </nav>
 
       <p class="explicacion">

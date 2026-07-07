@@ -104,6 +104,7 @@ import { CatalogoTile } from '../core/modelos';
                       <span class="notificacion">{{ ofertasPendientes() }}</span>
                     }
                   </a>
+                  <a routerLink="/manacore-panel/configuracion" (click)="menuAdmin.set(false)">⚙ Configuración</a>
                 </div>
               }
             </div>

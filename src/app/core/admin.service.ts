@@ -12,7 +12,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_URL } from './catalogo.service';
-import { Card, CardVariant, MtgSet, Pagina } from './modelos';
+import { Card, CardVariant, MtgSet, Pagina, StoreConfig } from './modelos';
 import { Pedido } from './pedido.service';
 import { OfertaColeccion } from './coleccion.service';
 
@@ -134,5 +134,42 @@ export class AdminService {
   actualizarOferta(id: number, estado: string, notas: string): Observable<OfertaAdmin> {
     return this.http.put<OfertaAdmin>(`${PANEL}/ofertas-coleccion/${id}`,
       { estado, notas });
+  }
+
+  // --- Configuracion de la tienda ---
+
+  getConfig(): Observable<StoreConfig> {
+    return this.http.get<StoreConfig>(`${PANEL}/configuracion`);
+  }
+
+  // Guarda la config completa (envio, pisos, datos de la tienda...).
+  // El backend reemplaza los campos, asi que se manda el objeto entero.
+  guardarConfig(config: StoreConfig): Observable<StoreConfig> {
+    return this.http.put<StoreConfig>(`${PANEL}/configuracion`, config);
+  }
+
+  // Prende/apaga el modo mantenimiento (la tienda muestra un aviso y
+  // el catalogo responde 503 mientras esta activo)
+  toggleMantenimiento(activo: boolean, mensaje: string): Observable<StoreConfig> {
+    return this.http.put<StoreConfig>(`${PANEL}/configuracion/mantenimiento`,
+      { activo, mensaje });
+  }
+
+  // Cambia la TRM a mano (real y/o ajuste) y recalcula TODOS los precios
+  setTrm(trmReal: number | null, ajuste: number | null): Observable<any> {
+    const body: Record<string, number> = {};
+    if (trmReal != null) body['trmReal'] = trmReal;
+    if (ajuste != null) body['ajuste'] = ajuste;
+    return this.http.put(`${PANEL}/trm`, body);
+  }
+
+  // Recalcula precios con la TRM actual (sin cambiar la TRM)
+  recalcularPrecios(): Observable<{ mensaje: string }> {
+    return this.http.post<{ mensaje: string }>(`${PANEL}/cartas/recalcular-precios`, {});
+  }
+
+  // Variantes con stock bajo (1 a 3 unidades) para reponer
+  getStockBajo(): Observable<CardVariant[]> {
+    return this.http.get<CardVariant[]>(`${PANEL}/variantes/stock-bajo`);
   }
 }
