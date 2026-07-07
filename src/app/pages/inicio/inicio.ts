@@ -31,8 +31,8 @@ export class Inicio {
   // llega, la pagina se actualiza sola. Empieza como lista vacia.
   private sets = toSignal(this.catalogo.getSets(), { initialValue: [] });
 
-  // "Lo último": las 6 variantes con stock subido mas recientemente
-  novedades = toSignal(this.catalogo.getNovedades(6), { initialValue: [] });
+  // "Lo último": las 10 variantes con stock subido mas recientemente
+  novedades = toSignal(this.catalogo.getNovedades(10), { initialValue: [] });
 
   // Expansiones que se muestran en el inicio:
   // 1. Ya lanzadas (releaseDate <= hoy). Las futuras como Reality
