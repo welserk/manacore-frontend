@@ -9,6 +9,7 @@
 // ============================================================
 import { Component, inject, signal } from '@angular/core';
 import { LegalService } from '../../core/legal.service';
+import { markdownAHtml } from '../../core/markdown';
 
 @Component({
   selector: 'app-terminos',
@@ -73,7 +74,7 @@ export class Terminos {
   constructor() {
     this.legal.getTerminos().subscribe({
       next: (doc) => {
-        this.html.set(this.markdownAHtml(doc.content));
+        this.html.set(markdownAHtml(doc.content));
         this.cargando.set(false);
       },
       error: () => {
@@ -81,52 +82,5 @@ export class Terminos {
         this.cargando.set(false);
       }
     });
-  }
-
-  // Traductor minimo de Markdown -> HTML.
-  // 1. Se ESCAPAN los caracteres especiales de HTML primero (nada de
-  //    lo que venga en el texto puede convertirse en una etiqueta)
-  // 2. Linea por linea: # titulos, - listas, resto parrafos
-  // 3. **texto** -> negrilla
-  private markdownAHtml(md: string): string {
-    const escapado = md
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-
-    const salida: string[] = [];
-    let enLista = false;
-
-    for (const cruda of escapado.split('\n')) {
-      const linea = cruda.trim();
-
-      // Al salir de un bloque de lista se cierra el <ul>
-      if (enLista && !linea.startsWith('- ')) {
-        salida.push('</ul>');
-        enLista = false;
-      }
-
-      if (!linea) continue;                       // linea vacia = separacion
-
-      if (linea.startsWith('### ')) {
-        salida.push(`<h3>${this.negrilla(linea.slice(4))}</h3>`);
-      } else if (linea.startsWith('## ')) {
-        salida.push(`<h2>${this.negrilla(linea.slice(3))}</h2>`);
-      } else if (linea.startsWith('# ')) {
-        salida.push(`<h1>${this.negrilla(linea.slice(2))}</h1>`);
-      } else if (linea.startsWith('- ')) {
-        if (!enLista) { salida.push('<ul>'); enLista = true; }
-        salida.push(`<li>${this.negrilla(linea.slice(2))}</li>`);
-      } else {
-        salida.push(`<p>${this.negrilla(linea)}</p>`);
-      }
-    }
-    if (enLista) salida.push('</ul>');
-    return salida.join('\n');
-  }
-
-  // **texto** -> <strong>texto</strong>
-  private negrilla(texto: string): string {
-    return texto.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   }
 }

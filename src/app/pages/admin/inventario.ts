@@ -47,6 +47,7 @@ interface FilaVariante {
         <a routerLink="/manacore-panel/pedidos" routerLinkActive="activo">Pedidos</a>
         <a routerLink="/manacore-panel/ofertas" routerLinkActive="activo">Ofertas</a>
         <a routerLink="/manacore-panel/configuracion" routerLinkActive="activo">Configuración</a>
+        <a routerLink="/manacore-panel/terminos" routerLinkActive="activo">Términos</a>
       </nav>
 
       <p class="explicacion">
@@ -100,9 +101,12 @@ interface FilaVariante {
                 </span>
                 <span class="carta-set">{{ carta.mtgSet.name }} ({{ carta.mtgSet.code }}) · #{{ carta.collectorNumber }} · {{ carta.rarity }}</span>
                 <span class="carta-precios">
-                  @if (carta.priceCop != null)      { <em>Normal {{ formato(carta.priceCop) }}</em> }
-                  @if (carta.priceCopFoil != null)  { <em>Foil {{ formato(carta.priceCopFoil) }}</em> }
-                  @if (carta.priceCopEtched != null){ <em>Etched {{ formato(carta.priceCopEtched) }}</em> }
+                  <!-- Solo los acabados con precio real: un $0 significa que esa
+                       impresion NO viene en ese acabado (ej: el Mystical Archive
+                       japones es foil-only) — mostrarlo confundiria -->
+                  @if (carta.priceCop) { <em>Normal {{ formato(carta.priceCop) }}</em> }
+                  @if (carta.priceCopFoil) { <em>Foil {{ formato(carta.priceCopFoil) }}</em> }
+                  @if (carta.priceCopEtched) { <em>Etched {{ formato(carta.priceCopEtched) }}</em> }
                 </span>
               </div>
               <span class="expandir">{{ abierta() === carta.id ? '▲' : '▼ Variantes' }}</span>

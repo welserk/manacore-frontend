@@ -36,6 +36,7 @@ const ESTADOS: Record<string, { texto: string; color: string }> = {
         <a routerLink="/manacore-panel/pedidos" routerLinkActive="activo">Pedidos</a>
         <a routerLink="/manacore-panel/ofertas" routerLinkActive="activo">Ofertas</a>
         <a routerLink="/manacore-panel/configuracion" routerLinkActive="activo">Configuración</a>
+        <a routerLink="/manacore-panel/terminos" routerLinkActive="activo">Términos</a>
       </nav>
 
       <!-- Filtro por estado -->

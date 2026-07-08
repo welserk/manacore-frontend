@@ -214,4 +214,12 @@ export class AdminService {
   actualizarCatalogo(): Observable<{ mensaje: string }> {
     return this.http.post<{ mensaje: string }>(`${PANEL}/cartas/importar-scryfall`, {});
   }
+
+  // --- Documentos legales (terminos y condiciones) ---
+
+  // Edita un documento legal (Markdown). El backend guarda titulo y
+  // contenido; se muestran en la pagina publica /terminos.
+  editarLegal(slug: string, titulo: string, contenido: string): Observable<any> {
+    return this.http.put(`${PANEL}/legal/${slug}`, { titulo, contenido });
+  }
 }

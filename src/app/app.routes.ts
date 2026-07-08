@@ -150,6 +150,14 @@ export const routes: Routes = [
     title: 'Panel · Configuración — ManaCore TCG'
   },
 
+  // Panel de administracion — Terminos y condiciones (editor)
+  {
+    path: 'manacore-panel/terminos',
+    canActivate: [soloAdmin],
+    loadComponent: () => import('./pages/admin/terminos-admin').then(m => m.AdminTerminos),
+    title: 'Panel · Términos — ManaCore TCG'
+  },
+
   // Mi cuenta: perfil y direccion de envio (requiere sesion)
   {
     path: 'cuenta',

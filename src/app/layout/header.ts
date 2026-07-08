@@ -105,6 +105,7 @@ import { CatalogoTile } from '../core/modelos';
                     }
                   </a>
                   <a routerLink="/manacore-panel/configuracion" (click)="menuAdmin.set(false)">⚙ Configuración</a>
+                  <a routerLink="/manacore-panel/terminos" (click)="menuAdmin.set(false)">📄 Términos</a>
                 </div>
               }
             </div>
