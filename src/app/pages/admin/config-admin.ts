@@ -13,8 +13,8 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { AdminService } from '../../core/admin.service';
-import { CardVariant, StoreConfig } from '../../core/modelos';
+import { AdminService, BusquedaTop } from '../../core/admin.service';
+import { StoreConfig } from '../../core/modelos';
 
 @Component({
   selector: 'app-admin-config',
@@ -156,23 +156,52 @@ import { CardVariant, StoreConfig } from '../../core/modelos';
           {{ guardando() ? 'Guardando…' : 'Guardar configuración' }}
         </button>
 
-        <!-- ============ STOCK BAJO ============ -->
-        <div class="panel tarjeta stock-bajo">
-          <h2>Stock bajo ({{ stockBajo().length }})</h2>
-          <p class="pista">Variantes con 1 a 3 unidades — conviene reponer.</p>
-          @if (stockBajo().length === 0) {
-            <p class="vacio-mini">Nada con stock bajo por ahora 👍</p>
-          } @else {
-            @for (v of stockBajo(); track v.id) {
-              <a class="linea-stock" [routerLink]="['/manacore-panel']"
-                 [queryParams]="{}">
-                <span>{{ v.card.name }}
-                  <em>({{ v.finish }} · {{ v.language.toUpperCase() }} · {{ v.card.mtgSet.code }})</em>
-                </span>
-                <span class="unidades">{{ v.stock }} en stock</span>
-              </a>
-            }
-          }
+        <!-- ============ ACTUALIZAR CATALOGO ============ -->
+        <div class="panel tarjeta">
+          <h2>Catálogo</h2>
+          <p class="pista">Cuando sale una expansión nueva, actualiza el catálogo
+            desde Scryfall: descarga los sets y cartas nuevos y los agrega (tu
+            stock actual no se toca). Tarda varios minutos y corre en segundo
+            plano; ve al Inventario para subirles stock cuando lleguen.</p>
+          @if (avisoCatalogo()) { <p class="aviso">{{ avisoCatalogo() }}</p> }
+          @if (errorCatalogo()) { <p class="error">{{ errorCatalogo() }}</p> }
+          <button class="btn-dorado" [disabled]="actualizando()" (click)="actualizarCatalogo()">
+            {{ actualizando() ? 'Actualización iniciada…' : '⟳ Actualizar catálogo desde Scryfall' }}
+          </button>
+        </div>
+
+        <!-- ============ BUSQUEDAS FRECUENTES ============ -->
+        <div class="panel tarjeta">
+          <h2>Tendencias de búsqueda</h2>
+          <div class="dos-columnas">
+            <div>
+              <h3>Lo más buscado</h3>
+              @if (busquedasTop().length === 0) {
+                <p class="vacio-mini">Aún no hay búsquedas registradas.</p>
+              } @else {
+                @for (b of busquedasTop(); track b.termino) {
+                  <div class="linea-busqueda">
+                    <span>{{ b.termino }}</span>
+                    <span class="veces">{{ b.veces }}×</span>
+                  </div>
+                }
+              }
+            </div>
+            <div>
+              <h3>Buscado y sin stock 💡</h3>
+              <p class="pista pista-mini">Lo que la gente pide y no tienes — oportunidades.</p>
+              @if (busquedasSinResultado().length === 0) {
+                <p class="vacio-mini">Nada por ahora.</p>
+              } @else {
+                @for (b of busquedasSinResultado(); track b.termino) {
+                  <div class="linea-busqueda">
+                    <span>{{ b.termino }}</span>
+                    <span class="veces alerta">{{ b.veces }}×</span>
+                  </div>
+                }
+              }
+            </div>
+          </div>
         </div>
       }
     </section>
@@ -260,18 +289,23 @@ import { CardVariant, StoreConfig } from '../../core/modelos';
     .guardar-todo { margin-bottom: 1.5rem; }
     .guardar-todo:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .stock-bajo .linea-stock {
+    /* Tendencias de busqueda */
+    h3 { font-size: 0.85rem; color: var(--texto-suave); text-transform: uppercase;
+         letter-spacing: 0.06em; margin-bottom: 0.6rem; }
+    .dos-columnas { display: grid; grid-template-columns: 1fr 1fr; gap: 1.6rem; }
+    .pista-mini { font-size: 0.76rem; margin-bottom: 0.6rem; }
+    .linea-busqueda {
       display: flex;
       justify-content: space-between;
       gap: 1rem;
-      padding: 0.45rem 0;
+      padding: 0.35rem 0;
       border-top: 1px solid var(--negro-borde);
-      font-size: 0.88rem;
+      font-size: 0.86rem;
       color: var(--texto);
     }
-    .stock-bajo .linea-stock:hover { color: var(--dorado); }
-    .linea-stock em { color: var(--texto-suave); font-style: normal; font-size: 0.76rem; }
-    .unidades { color: var(--alerta); font-weight: 600; white-space: nowrap; }
+    .veces { color: var(--dorado); font-weight: 600; white-space: nowrap; }
+    .veces.alerta { color: var(--alerta); }
+    @media (max-width: 620px) { .dos-columnas { grid-template-columns: 1fr; } }
 
     .aviso {
       background: rgba(0, 115, 62, 0.15);
@@ -297,19 +331,47 @@ export class AdminConfig {
 
   // La config completa como copia editable (se manda entera al guardar)
   form = signal<StoreConfig | null>(null);
-  stockBajo = signal<CardVariant[]>([]);
+  busquedasTop = signal<BusquedaTop[]>([]);
+  busquedasSinResultado = signal<BusquedaTop[]>([]);
 
   guardando = signal(false);
   guardandoTrm = signal(false);
   recalculando = signal(false);
+  actualizando = signal(false);
   avisoConfig = signal('');
   errorConfig = signal('');
   avisoTrm = signal('');
   errorTrm = signal('');
+  avisoCatalogo = signal('');
+  errorCatalogo = signal('');
 
   constructor() {
     this.admin.getConfig().subscribe(c => this.form.set(c));
-    this.admin.getStockBajo().subscribe(v => this.stockBajo.set(v));
+    this.admin.getBusquedasTop().subscribe(b => this.busquedasTop.set(b));
+    this.admin.getBusquedasSinResultado().subscribe(b => this.busquedasSinResultado.set(b));
+  }
+
+  // Dispara la actualizacion del catalogo (corre @Async en el backend)
+  actualizarCatalogo() {
+    if (!confirm('¿Actualizar el catálogo desde Scryfall? Descarga los datos '
+        + 'nuevos y puede tardar varios minutos. Tu stock no se toca.')) {
+      return;
+    }
+    this.avisoCatalogo.set('');
+    this.errorCatalogo.set('');
+    this.actualizando.set(true);
+    this.admin.actualizarCatalogo().subscribe({
+      next: (r) => {
+        this.avisoCatalogo.set((r.mensaje ?? 'Actualización iniciada')
+          + '. Corre en segundo plano; revisa el Inventario en unos minutos.');
+        // El boton queda deshabilitado un rato para no dispararlo dos veces
+        setTimeout(() => this.actualizando.set(false), 8000);
+      },
+      error: (e) => {
+        this.actualizando.set(false);
+        this.errorCatalogo.set(e.error?.error ?? 'No se pudo iniciar la actualización.');
+      }
+    });
   }
 
   // Edita un campo de la copia local (no toca el backend hasta Guardar)

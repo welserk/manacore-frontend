@@ -131,7 +131,33 @@ interface FilaVariante {
                             }
                           </td>
                           <td>{{ nombreIdioma(fila.language) }}</td>
-                          <td class="precio">{{ formato(precioFila(carta, fila)) }}</td>
+                          <td class="precio">
+                            @if (editandoPrecio() === clave(fila)) {
+                              <div class="precio-editor">
+                                <input type="number" min="0" class="precio-input"
+                                       [ngModel]="precioNuevo()"
+                                       (ngModelChange)="precioNuevo.set(+$event)"
+                                       [ngModelOptions]="{ standalone: true }">
+                                <button type="button" class="btn-mini"
+                                        [disabled]="guardandoClave() === clave(fila)"
+                                        (click)="fijarPrecio(carta, fila)">Fijar</button>
+                                <button type="button" class="btn-mini cancelar"
+                                        (click)="editandoPrecio.set(null)">✕</button>
+                              </div>
+                            } @else {
+                              <span class="valor-precio">{{ formato(precioFila(carta, fila)) }}</span>
+                              @if (fila.variante?.manualPriceCop != null) {
+                                <span class="badge-manual">manual</span>
+                              }
+                              <button type="button" class="btn-precio" title="Fijar precio manual"
+                                      (click)="abrirPrecio(carta, fila)">✎</button>
+                              @if (fila.variante?.manualPriceCop != null) {
+                                <button type="button" class="btn-precio auto" title="Volver al precio automático"
+                                        [disabled]="guardandoClave() === clave(fila)"
+                                        (click)="quitarPrecio(fila)">auto</button>
+                              }
+                            }
+                          </td>
                           <td>
                             <!-- Stepper − / +: mas comodo que las flechitas del
                                  navegador. El input edita una COPIA local; el
@@ -153,12 +179,13 @@ interface FilaVariante {
                                     (click)="guardarFila(carta, fila)">
                               {{ guardandoClave() === clave(fila) ? '…' : 'Guardar' }}
                             </button>
-                            <!-- Solo las variantes REALES se pueden eliminar
-                                 (las base sin crear no existen todavia) -->
+                            <!-- Eliminar: solo aparece en variantes YA creadas
+                                 (las filas base sin stock aun no existen). El
+                                 backend la rechaza si tiene ventas historicas. -->
                             @if (fila.variante) {
                               <button class="btn-eliminar" title="Eliminar esta variante"
                                       [disabled]="guardandoClave() === clave(fila)"
-                                      (click)="eliminarFila(fila)">🗑</button>
+                                      (click)="eliminarFila(fila)">🗑 Eliminar</button>
                             }
                           </td>
                         </tr>
@@ -422,19 +449,62 @@ interface FilaVariante {
     .btn-mini { padding: 0.35rem 0.8rem; font-size: 0.78rem; }
     .btn-mini:disabled { opacity: 0.4; cursor: not-allowed; }
     .acciones-fila { white-space: nowrap; }
+    /* Boton eliminar: claramente visible (rojo), no un iconito escondido */
     .btn-eliminar {
-      background: transparent;
-      border: 1px solid transparent;
+      background: rgba(211, 32, 42, 0.12);
+      border: 1px solid #d3202a;
       border-radius: 6px;
+      color: #ff6b6b;
       cursor: pointer;
-      font-size: 0.9rem;
-      padding: 0.25rem 0.45rem;
-      margin-left: 0.4rem;
-      opacity: 0.6;
-      transition: opacity 0.15s, border-color 0.15s;
+      font-size: 0.76rem;
+      font-weight: 600;
+      padding: 0.35rem 0.7rem;
+      margin-left: 0.5rem;
+      white-space: nowrap;
+      transition: background 0.15s;
     }
-    .btn-eliminar:hover { opacity: 1; border-color: #d3202a; }
-    .btn-eliminar:disabled { opacity: 0.25; cursor: not-allowed; }
+    .btn-eliminar:hover { background: rgba(211, 32, 42, 0.25); }
+    .btn-eliminar:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Editor de precio manual en la columna Precio */
+    .valor-precio { color: var(--dorado); font-weight: 600; }
+    .badge-manual {
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #1a1405;
+      background: var(--dorado);
+      border-radius: 4px;
+      padding: 0.05rem 0.35rem;
+      margin-left: 0.4rem;
+      vertical-align: middle;
+    }
+    .btn-precio {
+      background: transparent;
+      border: 1px solid var(--dorado-oscuro);
+      border-radius: 5px;
+      color: var(--dorado);
+      cursor: pointer;
+      font-size: 0.72rem;
+      padding: 0.1rem 0.4rem;
+      margin-left: 0.35rem;
+      transition: background 0.12s;
+    }
+    .btn-precio:hover { background: rgba(212, 175, 55, 0.15); }
+    .btn-precio.auto { color: var(--texto-suave); border-color: var(--negro-borde); }
+    .precio-editor { display: inline-flex; align-items: center; gap: 0.3rem; }
+    .precio-input {
+      width: 90px;
+      box-sizing: border-box;
+      background: var(--negro);
+      border: 1px solid var(--dorado-oscuro);
+      border-radius: 6px;
+      color: var(--texto);
+      font-family: var(--fuente-cuerpo);
+      padding: 0.3rem 0.4rem;
+      outline: none;
+    }
+    .btn-mini.cancelar { color: var(--texto-suave); }
     .nota-base {
       color: var(--texto-suave);
       font-size: 0.76rem;
@@ -539,6 +609,10 @@ export class AdminInventario {
   guardandoClave = signal<string | null>(null);
   avisoStock = signal('');
   errorStock = signal('');
+
+  // Edicion de precio manual: clave de la fila que se esta editando
+  editandoPrecio = signal<string | null>(null);
+  precioNuevo = signal(0);
 
   // Variante nueva (otros acabados/idiomas)
   nvFinish = signal('normal');
@@ -731,6 +805,72 @@ export class AdminInventario {
       error: (e) => {
         this.guardandoClave.set(null);
         this.errorStock.set(e.error?.error ?? 'No se pudo eliminar la variante.');
+      }
+    });
+  }
+
+  // Abre el editor de precio manual de una fila, precargando el precio actual
+  abrirPrecio(carta: Card, fila: FilaVariante) {
+    this.precioNuevo.set(this.precioFila(carta, fila));
+    this.editandoPrecio.set(this.clave(fila));
+  }
+
+  // Fija el precio manual. Si la variante aun no existe (fila base), primero
+  // la crea con el stock actual y luego le pone el precio — asi se puede
+  // ponerle precio a una foil que Scryfall dejo en $0 en un solo paso.
+  fijarPrecio(carta: Card, fila: FilaVariante) {
+    const precio = this.precioNuevo();
+    if (precio == null || precio < 0) return;
+    this.avisoStock.set('');
+    this.errorStock.set('');
+    this.guardandoClave.set(this.clave(fila));
+    const etiqueta = `${this.capitalizar(fila.finish)} ${this.nombreIdioma(fila.language)}`;
+
+    const aplicar = (variantId: number) =>
+      this.admin.setPrecioManualVariante(variantId, precio).subscribe({
+        next: () => {
+          this.guardandoClave.set(null);
+          this.editandoPrecio.set(null);
+          this.avisoStock.set(`Precio de ${etiqueta} fijado en ${this.formato(precio)} ✔`);
+          this.cargarVariantes(carta.id);
+        },
+        error: (e) => {
+          this.guardandoClave.set(null);
+          this.errorStock.set(e.error?.error ?? 'No se pudo fijar el precio.');
+        }
+      });
+
+    if (fila.variante) {
+      aplicar(fila.variante.id);
+    } else {
+      // Crear la variante (con el stock que haya en el campo) y luego el precio
+      this.admin.agregarVariante(carta.id, fila.finish, fila.language, this.stockDeFila(fila))
+        .subscribe({
+          next: (creada) => aplicar(creada.id),
+          error: (e) => {
+            this.guardandoClave.set(null);
+            this.errorStock.set(e.error?.error ?? 'No se pudo crear la variante.');
+          }
+        });
+    }
+  }
+
+  // Quita el precio manual: la variante vuelve al precio automatico
+  quitarPrecio(fila: FilaVariante) {
+    if (!fila.variante) return;
+    this.avisoStock.set('');
+    this.errorStock.set('');
+    this.guardandoClave.set(this.clave(fila));
+    const cardId = this.abierta()!;
+    this.admin.quitarPrecioManualVariante(fila.variante.id).subscribe({
+      next: () => {
+        this.guardandoClave.set(null);
+        this.avisoStock.set('Precio automático restaurado ✔');
+        this.cargarVariantes(cardId);
+      },
+      error: (e) => {
+        this.guardandoClave.set(null);
+        this.errorStock.set(e.error?.error ?? 'No se pudo quitar el precio manual.');
       }
     });
   }

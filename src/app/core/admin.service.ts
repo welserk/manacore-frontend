@@ -19,6 +19,12 @@ import { OfertaColeccion } from './coleccion.service';
 // La seccion del buscador del panel (pestañas del inventario)
 export type TipoBusqueda = 'cartas' | 'basicas' | 'tokens' | 'todas';
 
+// Un termino de busqueda con cuantas veces se busco (tendencias)
+export interface BusquedaTop {
+  termino: string;
+  veces: number;
+}
+
 // Una oferta vista por el ADMIN: incluye al vendedor y las notas internas
 export interface OfertaAdmin extends OfertaColeccion {
   adminNotes: string | null;
@@ -171,5 +177,41 @@ export class AdminService {
   // Variantes con stock bajo (1 a 3 unidades) para reponer
   getStockBajo(): Observable<CardVariant[]> {
     return this.http.get<CardVariant[]>(`${PANEL}/variantes/stock-bajo`);
+  }
+
+  // --- Precio manual por variante ---
+
+  // Fija un precio manual para ESA variante (sobrescribe el automatico).
+  // Util cuando Scryfall no trae precio (ej: foil sin cotizar) o para una
+  // impresion puntual que vale distinto.
+  setPrecioManualVariante(variantId: number, precio: number): Observable<CardVariant> {
+    return this.http.put<CardVariant>(`${PANEL}/variantes/${variantId}/precio-manual`,
+      { priceCop: precio });
+  }
+
+  // Quita el precio manual: la variante vuelve al precio automatico
+  quitarPrecioManualVariante(variantId: number): Observable<CardVariant> {
+    return this.http.delete<CardVariant>(`${PANEL}/variantes/${variantId}/precio-manual`);
+  }
+
+  // --- Tendencias de busqueda ---
+
+  // Los terminos mas buscados por los clientes
+  getBusquedasTop(): Observable<BusquedaTop[]> {
+    return this.http.get<BusquedaTop[]>(`${PANEL}/estadisticas/busquedas-top`);
+  }
+
+  // Busquedas que NO dieron resultado (oportunidades: lo que la gente
+  // pide y no tenemos en stock)
+  getBusquedasSinResultado(): Observable<BusquedaTop[]> {
+    return this.http.get<BusquedaTop[]>(`${PANEL}/estadisticas/busquedas-sin-resultado`);
+  }
+
+  // --- Catalogo ---
+
+  // Dispara la actualizacion del catalogo desde Scryfall (trae sets/cartas
+  // nuevos). Corre en segundo plano en el backend; responde de inmediato.
+  actualizarCatalogo(): Observable<{ mensaje: string }> {
+    return this.http.post<{ mensaje: string }>(`${PANEL}/cartas/importar-scryfall`, {});
   }
 }
