@@ -28,7 +28,12 @@ import { PanelNav } from './panel-nav';
 
       <app-panel-nav />
 
-      @if (!form()) {
+      @if (errorCarga()) {
+        <div class="panel tarjeta">
+          <p class="error">{{ errorCarga() }}</p>
+          <button class="btn-fantasma" (click)="cargar()">Reintentar</button>
+        </div>
+      } @else if (!form()) {
         <p class="vacio">Cargando configuración…</p>
       } @else if (form(); as c) {
 
@@ -322,8 +327,23 @@ export class AdminConfig {
   avisoCatalogo = signal('');
   errorCatalogo = signal('');
 
+  errorCarga = signal('');
+
   constructor() {
-    this.admin.getConfig().subscribe(c => this.form.set(c));
+    this.cargar();
+  }
+
+  // Carga la configuracion. Si el backend no responde (caido, importando,
+  // o sesion vencida) se muestra el error con boton de reintentar, en vez
+  // de quedarse "Cargando..." para siempre.
+  cargar() {
+    this.errorCarga.set('');
+    this.admin.getConfig().subscribe({
+      next: (c) => this.form.set(c),
+      error: () => this.errorCarga.set(
+        'No se pudo cargar la configuración. ¿El backend está corriendo? '
+        + 'Si acabas de reiniciarlo, prueba también cerrar sesión y volver a entrar.')
+    });
     this.admin.getBusquedasTop().subscribe(b => this.busquedasTop.set(b));
     this.admin.getBusquedasSinResultado().subscribe(b => this.busquedasSinResultado.set(b));
   }

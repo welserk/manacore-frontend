@@ -30,10 +30,13 @@ const ESTADOS: Record<string, { texto: string; color: string }> = {
       <p class="miga">TIENDA</p>
       <h1>Vende tu colección</h1>
       <p class="explicacion">
-        ¿Tienes cartas que ya no usas? Cuéntanos qué tienes: pega la lista en el
-        cuadro (una carta por línea, con la expansión si la sabes) y si quieres
-        adjunta un Excel, PDF o archivo de texto con el detalle. La revisamos y
-        te contactamos por WhatsApp con una oferta.
+        ¿Tienes cartas que ya no usas? Te las recibimos de dos formas:
+        <strong>te las compramos</strong>, o <strong>las cambias por cartas de
+        nuestro stock</strong> — tu colección se valora al <strong>70%</strong>
+        de su precio para el intercambio. Cuéntanos qué tienes: pega la lista en
+        el cuadro (una carta por línea, con la expansión si la sabes) y si
+        quieres adjunta un Excel, PDF o archivo de texto con el detalle. La
+        revisamos y te contactamos por WhatsApp con una oferta.
       </p>
 
       <div class="panel tarjeta">

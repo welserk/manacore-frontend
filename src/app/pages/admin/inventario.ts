@@ -45,6 +45,8 @@ interface FilaVariante {
       <p class="explicacion">
         Busca en el censo completo, abre las variantes y sube el stock de lo
         que llegó. Cada sección va por aparte: cartas, tierras básicas y tokens.
+        💡 También puedes <strong>explorar una expansión entera</strong>: deja el
+        nombre vacío, elige el set en el desplegable y dale Buscar.
       </p>
 
       <!-- Secciones del censo: cartas / tierras basicas / tokens -->
