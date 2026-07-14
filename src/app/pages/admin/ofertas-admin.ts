@@ -7,10 +7,10 @@
 // con notas internas que el vendedor nunca ve.
 // ============================================================
 import { Component, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AdminService, OfertaAdmin } from '../../core/admin.service';
 import { API_URL } from '../../core/catalogo.service';
+import { PanelNav } from './panel-nav';
 
 const ESTADOS: Record<string, { texto: string; color: string }> = {
   PENDIENTE:  { texto: 'Pendiente',     color: '#d4af37' },
@@ -21,7 +21,7 @@ const ESTADOS: Record<string, { texto: string; color: string }> = {
 
 @Component({
   selector: 'app-admin-ofertas',
-  imports: [RouterLink, RouterLinkActive, FormsModule],
+  imports: [PanelNav, FormsModule],
   template: `
     <!-- Fondo: Saheeli Rai (el mismo del panel) -->
     <section class="ofertas-admin fondo-arte"
@@ -29,15 +29,7 @@ const ESTADOS: Record<string, { texto: string; color: string }> = {
       <p class="miga">PANEL MANACORE</p>
       <h1>Venta de colecciones</h1>
 
-      <!-- Navegacion del panel -->
-      <nav class="tabs-panel">
-        <a routerLink="/manacore-panel" [routerLinkActiveOptions]="{ exact: true }"
-           routerLinkActive="activo">Inventario</a>
-        <a routerLink="/manacore-panel/pedidos" routerLinkActive="activo">Pedidos</a>
-        <a routerLink="/manacore-panel/ofertas" routerLinkActive="activo">Ofertas</a>
-        <a routerLink="/manacore-panel/configuracion" routerLinkActive="activo">Configuración</a>
-        <a routerLink="/manacore-panel/terminos" routerLinkActive="activo">Términos</a>
-      </nav>
+      <app-panel-nav />
 
       <!-- Filtro por estado -->
       <div class="filtros-estado">
@@ -121,22 +113,6 @@ const ESTADOS: Record<string, { texto: string; color: string }> = {
       letter-spacing: 0.25em;
     }
     h1 { font-size: 1.7rem; margin: 0.2rem 0 1rem; }
-
-    .tabs-panel { display: flex; gap: 0.6rem; margin-bottom: 1.2rem; }
-    .tabs-panel a {
-      padding: 0.45rem 1.2rem;
-      border: 1px solid var(--negro-borde);
-      border-radius: 20px;
-      color: var(--texto-suave);
-      font-size: 0.88rem;
-      font-weight: 600;
-      transition: all 0.15s;
-    }
-    .tabs-panel a.activo {
-      border-color: var(--dorado);
-      color: var(--dorado);
-      background: rgba(212, 175, 55, 0.08);
-    }
 
     .filtros-estado { display: flex; gap: 0.6rem; margin-bottom: 1.4rem; flex-wrap: wrap; }
     .filtros-estado button {

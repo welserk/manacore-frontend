@@ -7,9 +7,10 @@
 // Maximo 10 pedidos por tanda, con paginacion para las demas.
 // ============================================================
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { AdminService } from '../../core/admin.service';
 import { Pedido } from '../../core/pedido.service';
+import { PanelNav } from './panel-nav';
 
 // Insignias de estado (mismas de "Mis pedidos" del cliente)
 export const ESTADOS_PEDIDO: Record<string, { texto: string; color: string }> = {
@@ -24,7 +25,7 @@ const POR_PAGINA = 10;
 
 @Component({
   selector: 'app-admin-pedidos',
-  imports: [RouterLink, RouterLinkActive],
+  imports: [PanelNav, RouterLink],
   template: `
     <!-- Fondo: Saheeli Rai (el mismo del panel) -->
     <section class="pedidos-admin fondo-arte"
@@ -32,15 +33,7 @@ const POR_PAGINA = 10;
       <p class="miga">PANEL MANACORE</p>
       <h1>Pedidos</h1>
 
-      <!-- Navegacion del panel -->
-      <nav class="tabs-panel">
-        <a routerLink="/manacore-panel" [routerLinkActiveOptions]="{ exact: true }"
-           routerLinkActive="activo">Inventario</a>
-        <a routerLink="/manacore-panel/pedidos" routerLinkActive="activo">Pedidos</a>
-        <a routerLink="/manacore-panel/ofertas" routerLinkActive="activo">Ofertas</a>
-        <a routerLink="/manacore-panel/configuracion" routerLinkActive="activo">Configuración</a>
-        <a routerLink="/manacore-panel/terminos" routerLinkActive="activo">Términos</a>
-      </nav>
+      <app-panel-nav />
 
       <!-- Vista: por despachar / todos -->
       <div class="vistas">
@@ -105,22 +98,6 @@ const POR_PAGINA = 10;
       letter-spacing: 0.25em;
     }
     h1 { font-size: 1.7rem; margin: 0.2rem 0 1rem; }
-
-    .tabs-panel { display: flex; gap: 0.6rem; margin-bottom: 1.2rem; }
-    .tabs-panel a {
-      padding: 0.45rem 1.2rem;
-      border: 1px solid var(--negro-borde);
-      border-radius: 20px;
-      color: var(--texto-suave);
-      font-size: 0.88rem;
-      font-weight: 600;
-      transition: all 0.15s;
-    }
-    .tabs-panel a.activo {
-      border-color: var(--dorado);
-      color: var(--dorado);
-      background: rgba(212, 175, 55, 0.08);
-    }
 
     .vistas { display: flex; gap: 0.6rem; margin-bottom: 1.4rem; }
     .vistas button {

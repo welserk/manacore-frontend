@@ -96,6 +96,7 @@ import { CatalogoTile } from '../core/modelos';
               </button>
               @if (menuAdmin()) {
                 <div class="menu-desplegable">
+                  <a routerLink="/manacore-panel/dashboard" (click)="menuAdmin.set(false)">📊 Dashboard</a>
                   <a routerLink="/manacore-panel" (click)="menuAdmin.set(false)">🃏 Inventario</a>
                   <a routerLink="/manacore-panel/pedidos" (click)="menuAdmin.set(false)">📦 Pedidos</a>
                   <a routerLink="/manacore-panel/ofertas" (click)="menuAdmin.set(false)">
@@ -104,6 +105,7 @@ import { CatalogoTile } from '../core/modelos';
                       <span class="notificacion">{{ ofertasPendientes() }}</span>
                     }
                   </a>
+                  <a routerLink="/manacore-panel/usuarios" (click)="menuAdmin.set(false)">👥 Usuarios</a>
                   <a routerLink="/manacore-panel/configuracion" (click)="menuAdmin.set(false)">⚙ Configuración</a>
                   <a routerLink="/manacore-panel/terminos" (click)="menuAdmin.set(false)">📄 Términos</a>
                 </div>

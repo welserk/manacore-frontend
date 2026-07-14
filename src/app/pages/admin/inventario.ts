@@ -15,10 +15,10 @@
 // Solo entra el rol ADMIN (guardia en la ruta + backend).
 // ============================================================
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AdminService, TipoBusqueda } from '../../core/admin.service';
 import { Card, CardVariant, MtgSet, NOMBRES_IDIOMA, Pagina } from '../../core/modelos';
+import { PanelNav } from './panel-nav';
 
 // Una fila de la tabla de variantes. Puede ser:
 //  - real:    existe en la base de datos (variante con ID)
@@ -32,7 +32,7 @@ interface FilaVariante {
 
 @Component({
   selector: 'app-admin-inventario',
-  imports: [RouterLink, RouterLinkActive, FormsModule],
+  imports: [PanelNav, FormsModule],
   template: `
     <!-- Fondo: Saheeli Rai (la artifice: perfecta para el taller del admin) -->
     <section class="inventario fondo-arte"
@@ -40,15 +40,7 @@ interface FilaVariante {
       <p class="miga">PANEL MANACORE</p>
       <h1>Inventario</h1>
 
-      <!-- Navegacion del panel -->
-      <nav class="tabs-panel">
-        <a routerLink="/manacore-panel" [routerLinkActiveOptions]="{ exact: true }"
-           routerLinkActive="activo">Inventario</a>
-        <a routerLink="/manacore-panel/pedidos" routerLinkActive="activo">Pedidos</a>
-        <a routerLink="/manacore-panel/ofertas" routerLinkActive="activo">Ofertas</a>
-        <a routerLink="/manacore-panel/configuracion" routerLinkActive="activo">Configuración</a>
-        <a routerLink="/manacore-panel/terminos" routerLinkActive="activo">Términos</a>
-      </nav>
+      <app-panel-nav />
 
       <p class="explicacion">
         Busca en el censo completo, abre las variantes y sube el stock de lo
@@ -260,26 +252,6 @@ interface FilaVariante {
       letter-spacing: 0.25em;
     }
     h1 { font-size: 1.7rem; margin: 0.2rem 0 0.8rem; }
-
-    .tabs-panel {
-      display: flex;
-      gap: 0.6rem;
-      margin-bottom: 1.2rem;
-    }
-    .tabs-panel a {
-      padding: 0.45rem 1.2rem;
-      border: 1px solid var(--negro-borde);
-      border-radius: 20px;
-      color: var(--texto-suave);
-      font-size: 0.88rem;
-      font-weight: 600;
-      transition: all 0.15s;
-    }
-    .tabs-panel a.activo {
-      border-color: var(--dorado);
-      color: var(--dorado);
-      background: rgba(212, 175, 55, 0.08);
-    }
 
     .explicacion {
       color: var(--texto-suave);

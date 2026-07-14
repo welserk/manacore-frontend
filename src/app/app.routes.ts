@@ -158,6 +158,22 @@ export const routes: Routes = [
     title: 'Panel · Términos — ManaCore TCG'
   },
 
+  // Panel de administracion — Usuarios (clientes y equipo de envios)
+  {
+    path: 'manacore-panel/usuarios',
+    canActivate: [soloAdmin],
+    loadComponent: () => import('./pages/admin/usuarios-admin').then(m => m.AdminUsuarios),
+    title: 'Panel · Usuarios — ManaCore TCG'
+  },
+
+  // Panel de administracion — Dashboard (estadisticas del negocio)
+  {
+    path: 'manacore-panel/dashboard',
+    canActivate: [soloAdmin],
+    loadComponent: () => import('./pages/admin/dashboard-admin').then(m => m.AdminDashboard),
+    title: 'Panel · Dashboard — ManaCore TCG'
+  },
+
   // Mi cuenta: perfil y direccion de envio (requiere sesion)
   {
     path: 'cuenta',

@@ -6,15 +6,15 @@
 // el cliente. Guardar -> PUT /manacore-panel/api/legal/terminos.
 // ============================================================
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AdminService } from '../../core/admin.service';
 import { LegalService } from '../../core/legal.service';
 import { markdownAHtml } from '../../core/markdown';
+import { PanelNav } from './panel-nav';
 
 @Component({
   selector: 'app-admin-terminos',
-  imports: [RouterLink, RouterLinkActive, FormsModule],
+  imports: [PanelNav, FormsModule],
   template: `
     <!-- Fondo: Saheeli Rai (el mismo del panel) -->
     <section class="terminos-admin fondo-arte"
@@ -22,14 +22,7 @@ import { markdownAHtml } from '../../core/markdown';
       <p class="miga">PANEL MANACORE</p>
       <h1>Términos y condiciones</h1>
 
-      <nav class="tabs-panel">
-        <a routerLink="/manacore-panel" [routerLinkActiveOptions]="{ exact: true }"
-           routerLinkActive="activo">Inventario</a>
-        <a routerLink="/manacore-panel/pedidos" routerLinkActive="activo">Pedidos</a>
-        <a routerLink="/manacore-panel/ofertas" routerLinkActive="activo">Ofertas</a>
-        <a routerLink="/manacore-panel/configuracion" routerLinkActive="activo">Configuración</a>
-        <a routerLink="/manacore-panel/terminos" routerLinkActive="activo">Términos</a>
-      </nav>
+      <app-panel-nav />
 
       @if (cargando()) {
         <p class="vacio">Cargando…</p>
@@ -78,22 +71,6 @@ import { markdownAHtml } from '../../core/markdown';
       letter-spacing: 0.25em;
     }
     h1 { font-size: 1.7rem; margin: 0.2rem 0 1rem; }
-
-    .tabs-panel { display: flex; gap: 0.6rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
-    .tabs-panel a {
-      padding: 0.45rem 1.2rem;
-      border: 1px solid var(--negro-borde);
-      border-radius: 20px;
-      color: var(--texto-suave);
-      font-size: 0.88rem;
-      font-weight: 600;
-      transition: all 0.15s;
-    }
-    .tabs-panel a.activo {
-      border-color: var(--dorado);
-      color: var(--dorado);
-      background: rgba(212, 175, 55, 0.08);
-    }
 
     .vacio { color: var(--texto-suave); padding: 2rem 0; text-align: center; }
     .pista { font-size: 0.82rem; color: var(--texto-suave); line-height: 1.5; margin-bottom: 1rem; }

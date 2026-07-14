@@ -25,6 +25,54 @@ export interface BusquedaTop {
   veces: number;
 }
 
+// Un usuario visto por el ADMIN (cliente o shipper)
+export interface UsuarioAdmin {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  phone: string | null;
+  city: string | null;
+  active: boolean;         // false = cuenta bloqueada (o sin verificar email)
+  createdAt: string;
+  shippingPoints: number;
+  hasReward: boolean;
+}
+
+// Los numeros grandes del dashboard (GET /resumen)
+export interface ResumenTienda {
+  ventasMes: number;
+  pedidosSinEnviar: number;
+  cartasEnStock: number;
+  usuariosNuevosHoy: number;
+  stockBajo: number;
+  totalClientes: number;
+}
+
+// Un dia de ventas (GET /estadisticas/ventas-diarias, ultimos 30)
+export interface VentaDiaria {
+  fecha: string;    // "2026-07-08"
+  total: number;
+}
+
+// Una carta del top de mas vendidas
+export interface CartaVendida {
+  id: number;
+  nombre: string;
+  imagen: string | null;
+  set: string;
+  precio: number;
+  unidadesVendidas: number;
+  totalGenerado: number;
+}
+
+// Ventas por color de mana (labels W/U/B/R/G/Incoloro + data en unidades)
+export interface VentasPorColor {
+  labels: string[];
+  data: number[];
+  colores: string[];
+}
+
 // Una oferta vista por el ADMIN: incluye al vendedor y las notas internas
 export interface OfertaAdmin extends OfertaColeccion {
   adminNotes: string | null;
@@ -221,5 +269,44 @@ export class AdminService {
   // contenido; se muestran en la pagina publica /terminos.
   editarLegal(slug: string, titulo: string, contenido: string): Observable<any> {
     return this.http.put(`${PANEL}/legal/${slug}`, { titulo, contenido });
+  }
+
+  // --- Usuarios ---
+
+  // Lista usuarios por rol: 'CUSTOMER' (clientes) o 'SHIPPER' (equipo)
+  getUsuarios(rol: string = 'CUSTOMER'): Observable<UsuarioAdmin[]> {
+    return this.http.get<UsuarioAdmin[]>(`${PANEL}/usuarios`, {
+      params: { rol }
+    });
+  }
+
+  // Bloquea (active=false) o reactiva (active=true) una cuenta
+  toggleUsuario(id: number, active: boolean): Observable<UsuarioAdmin> {
+    return this.http.put<UsuarioAdmin>(`${PANEL}/usuarios/${id}/estado`, { active });
+  }
+
+  // Crea la cuenta de un empleado de envios (SHIPPER): queda activa de
+  // inmediato, sin verificacion de email. El admin le entrega las
+  // credenciales al empleado.
+  crearTrabajador(name: string, email: string, password: string): Observable<any> {
+    return this.http.post(`${PANEL}/usuarios/trabajador`, { name, email, password });
+  }
+
+  // --- Dashboard ---
+
+  getResumen(): Observable<ResumenTienda> {
+    return this.http.get<ResumenTienda>(`${PANEL}/resumen`);
+  }
+
+  getVentasDiarias(): Observable<VentaDiaria[]> {
+    return this.http.get<VentaDiaria[]>(`${PANEL}/estadisticas/ventas-diarias`);
+  }
+
+  getCartasMasVendidas(): Observable<CartaVendida[]> {
+    return this.http.get<CartaVendida[]>(`${PANEL}/estadisticas/cartas-mas-vendidas`);
+  }
+
+  getVentasPorColor(): Observable<VentasPorColor> {
+    return this.http.get<VentasPorColor>(`${PANEL}/estadisticas/ventas-por-color`);
   }
 }
