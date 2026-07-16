@@ -16,7 +16,7 @@
 // ============================================================
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AdminService, TipoBusqueda } from '../../core/admin.service';
+import { AdminService, TipoBusqueda, ResultadoImportacionLote } from '../../core/admin.service';
 import { Card, CardVariant, MtgSet, NOMBRES_IDIOMA, Pagina } from '../../core/modelos';
 import { PanelNav } from './panel-nav';
 
@@ -48,6 +48,78 @@ interface FilaVariante {
         💡 También puedes <strong>explorar una expansión entera</strong>: deja el
         nombre vacío, elige el set en el desplegable y dale Buscar.
       </p>
+
+      <!-- ============ IMPORTAR LOTE (ManaBox CSV) ============ -->
+      <!-- Plegable: se abre cuando llega un lote nuevo y hay que cargarlo -->
+      <div class="importar-lote panel">
+        <button type="button" class="cabecera-importar"
+                (click)="mostrarImportar.set(!mostrarImportar())">
+          <span>📦 Importar lote desde ManaBox (CSV)</span>
+          <span class="chevron">{{ mostrarImportar() ? '▲' : '▼' }}</span>
+        </button>
+
+        @if (mostrarImportar()) {
+          <div class="cuerpo-importar">
+            <p class="explica-importar">
+              Sube el archivo <code>.csv</code> que exporta ManaBox. Por cada carta
+              se <strong>suma</strong> su cantidad al stock (se identifica por su
+              Scryfall ID, así no hay confusión entre impresiones). ⚠️ Si subes el
+              mismo archivo dos veces, el stock se <strong>duplica</strong>.
+            </p>
+            <div class="fila-importar">
+              <input type="file" accept=".csv,text/csv" (change)="alElegirArchivo($event)">
+              <button class="btn-dorado" [disabled]="!archivoLote() || importando()"
+                      (click)="importarLote()">
+                {{ importando() ? 'Importando…' : 'Importar lote' }}
+              </button>
+            </div>
+            @if (errorLote()) { <p class="error">{{ errorLote() }}</p> }
+
+            <!-- Resumen de la importacion -->
+            @if (resultadoLote(); as r) {
+              <div class="resumen-lote">
+                <p class="resumen-titulo">Resultado de la importación</p>
+                <ul class="resumen-cifras">
+                  <li><strong>{{ r.unidadesAgregadas }}</strong> unidades agregadas al stock</li>
+                  <li><strong>{{ r.variantesCreadas }}</strong> variantes nuevas creadas</li>
+                  <li><strong>{{ r.variantesActualizadas }}</strong> variantes ya existentes actualizadas</li>
+                  <li class="tenue">{{ r.filasLeidas }} filas leídas del archivo</li>
+                </ul>
+
+                <!-- Cartas cuyo Scryfall ID no esta en el catalogo -->
+                @if (r.noEncontradas.length) {
+                  <details class="lista-problemas">
+                    <summary>⚠ {{ r.noEncontradas.length }} carta(s) no están en el catálogo</summary>
+                    <p class="pista-problemas">
+                      Ve a <strong>Configuración → ⟳ Actualizar catálogo</strong>, espera a
+                      que termine y vuelve a importar este mismo archivo.
+                    </p>
+                    <ul>
+                      @for (f of r.noEncontradas; track $index) {
+                        <li>Línea {{ f.linea }}: {{ f.nombre || '(sin nombre)' }}
+                          @if (f.set) { <em>· {{ f.set }} #{{ f.numero }}</em> }
+                        </li>
+                      }
+                    </ul>
+                  </details>
+                }
+
+                <!-- Filas con datos invalidos (cantidad, acabado, etc.) -->
+                @if (r.errores.length) {
+                  <details class="lista-problemas">
+                    <summary>✖ {{ r.errores.length }} fila(s) con error</summary>
+                    <ul>
+                      @for (f of r.errores; track $index) {
+                        <li>Línea {{ f.linea }}: {{ f.nombre || '(sin nombre)' }} — {{ f.motivo }}</li>
+                      }
+                    </ul>
+                  </details>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
 
       <!-- Secciones del censo: cartas / tierras basicas / tokens -->
       <div class="tipos">
@@ -536,6 +608,116 @@ interface FilaVariante {
       font-size: 0.82rem;
       margin-bottom: 0.8rem;
     }
+
+    /* ===== Importar lote (ManaBox CSV) ===== */
+    .importar-lote { margin-bottom: 1.2rem; overflow: hidden; }
+    .cabecera-importar {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1.2rem;
+      background: transparent;
+      border: none;
+      color: var(--dorado);
+      font-family: var(--fuente-cuerpo);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .cabecera-importar:hover { background: rgba(212, 175, 55, 0.05); }
+    .cabecera-importar .chevron { color: var(--texto-suave); font-size: 0.8rem; }
+    .cuerpo-importar {
+      border-top: 1px solid var(--negro-borde);
+      padding: 1rem 1.2rem;
+    }
+    .explica-importar {
+      color: var(--texto-suave);
+      font-size: 0.85rem;
+      line-height: 1.6;
+      margin-bottom: 0.9rem;
+    }
+    .explica-importar code {
+      background: var(--negro);
+      border: 1px solid var(--negro-borde);
+      border-radius: 5px;
+      padding: 0.05rem 0.4rem;
+      font-size: 0.78rem;
+    }
+    .fila-importar {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      flex-wrap: wrap;
+    }
+    .fila-importar input[type=file] {
+      flex: 1;
+      min-width: 220px;
+      color: var(--texto-suave);
+      font-size: 0.82rem;
+    }
+    .fila-importar input[type=file]::file-selector-button {
+      background: var(--negro);
+      border: 1px solid var(--dorado-oscuro);
+      border-radius: 6px;
+      color: var(--dorado);
+      font-family: var(--fuente-cuerpo);
+      padding: 0.4rem 0.8rem;
+      margin-right: 0.7rem;
+      cursor: pointer;
+    }
+
+    /* Resumen tras importar */
+    .resumen-lote {
+      margin-top: 1rem;
+      padding-top: 0.9rem;
+      border-top: 1px dashed var(--negro-borde);
+    }
+    .resumen-titulo {
+      color: var(--texto);
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+    .resumen-cifras { list-style: none; padding: 0; margin: 0 0 0.6rem; }
+    .resumen-cifras li {
+      color: var(--texto-suave);
+      font-size: 0.85rem;
+      padding: 0.15rem 0;
+    }
+    .resumen-cifras strong { color: var(--dorado); font-size: 0.95rem; }
+    .resumen-cifras .tenue { opacity: 0.7; font-size: 0.8rem; }
+
+    .lista-problemas {
+      margin-top: 0.6rem;
+      background: var(--negro);
+      border: 1px solid var(--negro-borde);
+      border-radius: 8px;
+      padding: 0.5rem 0.9rem;
+    }
+    .lista-problemas summary {
+      cursor: pointer;
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--texto);
+    }
+    .pista-problemas {
+      color: var(--texto-suave);
+      font-size: 0.78rem;
+      margin: 0.5rem 0;
+    }
+    .lista-problemas ul {
+      margin: 0.4rem 0 0;
+      padding-left: 1.1rem;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .lista-problemas li {
+      color: var(--texto-suave);
+      font-size: 0.8rem;
+      padding: 0.1rem 0;
+    }
+    .lista-problemas li em { color: var(--texto-suave); opacity: 0.75; font-style: normal; }
   `
 })
 export class AdminInventario {
@@ -597,6 +779,14 @@ export class AdminInventario {
   nvIdioma = signal('');
   nvStock = signal(1);
   creandoVariante = signal(false);
+
+  // Importar lote (ManaBox CSV)
+  mostrarImportar = signal(false);                 // panel plegado por defecto
+  archivoLote = signal<File | null>(null);         // el .csv elegido
+  importando = signal(false);
+  resultadoLote = signal<ResultadoImportacionLote | null>(null);
+  errorLote = signal('');
+  private inputArchivo?: HTMLInputElement;          // para limpiar el input al terminar
 
   constructor() {
     // Al abrir el panel: el desplegable arranca con todos los sets
@@ -849,6 +1039,36 @@ export class AdminInventario {
       error: (e) => {
         this.guardandoClave.set(null);
         this.errorStock.set(e.error?.error ?? 'No se pudo quitar el precio manual.');
+      }
+    });
+  }
+
+  // Guarda el archivo elegido en el input de tipo file
+  alElegirArchivo(evento: Event) {
+    const input = evento.target as HTMLInputElement;
+    this.inputArchivo = input;
+    this.archivoLote.set(input.files && input.files.length ? input.files[0] : null);
+    this.errorLote.set('');
+  }
+
+  // Sube el CSV al backend y muestra el resumen
+  importarLote() {
+    const archivo = this.archivoLote();
+    if (!archivo) return;
+    this.importando.set(true);
+    this.errorLote.set('');
+    this.resultadoLote.set(null);
+    this.admin.importarLote(archivo).subscribe({
+      next: (r) => {
+        this.importando.set(false);
+        this.resultadoLote.set(r);
+        // Limpiamos el archivo elegido para evitar reimportarlo por error
+        this.archivoLote.set(null);
+        if (this.inputArchivo) this.inputArchivo.value = '';
+      },
+      error: (e) => {
+        this.importando.set(false);
+        this.errorLote.set(e.error?.error ?? 'No se pudo importar el archivo.');
       }
     });
   }

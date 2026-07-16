@@ -25,6 +25,27 @@ export interface BusquedaTop {
   veces: number;
 }
 
+// Una fila del CSV que NO se pudo importar (no encontrada o con error),
+// con lo necesario para ubicarla en el archivo y saber por que
+export interface FilaProblemaLote {
+  linea: number;       // numero de linea en el archivo (1 = encabezado)
+  nombre: string;
+  set: string;
+  numero: string;
+  scryfallId: string;
+  motivo: string;      // por que no entro (mensaje en español)
+}
+
+// El resumen que devuelve importar un lote de ManaBox
+export interface ResultadoImportacionLote {
+  filasLeidas: number;            // filas de datos que traia el archivo
+  unidadesAgregadas: number;      // total de unidades sumadas al stock
+  variantesCreadas: number;       // variantes nuevas (carta+acabado+idioma)
+  variantesActualizadas: number;  // veces que se sumo sobre una existente
+  noEncontradas: FilaProblemaLote[]; // su carta no esta en el catalogo
+  errores: FilaProblemaLote[];       // filas con datos invalidos
+}
+
 // Un usuario visto por el ADMIN (cliente o shipper)
 export interface UsuarioAdmin {
   id: number;
@@ -261,6 +282,16 @@ export class AdminService {
   // nuevos). Corre en segundo plano en el backend; responde de inmediato.
   actualizarCatalogo(): Observable<{ mensaje: string }> {
     return this.http.post<{ mensaje: string }>(`${PANEL}/cartas/importar-scryfall`, {});
+  }
+
+  // Importa un LOTE de stock desde el CSV que exporta ManaBox. Sube el
+  // archivo como FormData (multipart) y devuelve el resumen: cuantas
+  // unidades entraron, variantes nuevas, y las filas que no se pudieron
+  // importar (carta no encontrada o datos invalidos).
+  importarLote(archivo: File): Observable<ResultadoImportacionLote> {
+    const datos = new FormData();
+    datos.append('archivo', archivo);
+    return this.http.post<ResultadoImportacionLote>(`${PANEL}/cartas/importar-lote`, datos);
   }
 
   // --- Documentos legales (terminos y condiciones) ---
