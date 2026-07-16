@@ -30,6 +30,16 @@ const soloAdmin = () => {
   return auth.sesion()?.rol === 'ADMIN' ? true : router.createUrlTree(['/']);
 };
 
+// Guardia del panel de envios: entra el SHIPPER (el empleado) y
+// tambien el ADMIN (para supervisar la misma vista que ve su
+// empleado). Igual que el backend: /envios/api/** acepta ambos roles.
+const soloShipper = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  const rol = auth.sesion()?.rol;
+  return (rol === 'SHIPPER' || rol === 'ADMIN') ? true : router.createUrlTree(['/']);
+};
+
 export const routes: Routes = [
   // Pagina de inicio
   {
@@ -108,6 +118,15 @@ export const routes: Routes = [
     canActivate: [soloConSesion],
     loadComponent: () => import('./pages/vender/vender').then(m => m.Vender),
     title: 'Vende tu colección — ManaCore TCG'
+  },
+
+  // Panel de ENVIOS: la pagina del empleado de envios (SHIPPER).
+  // El ADMIN tambien puede entrar para supervisar.
+  {
+    path: 'envios',
+    canActivate: [soloShipper],
+    loadComponent: () => import('./pages/envios/envios').then(m => m.Envios),
+    title: 'Envíos — ManaCore TCG'
   },
 
   // Panel de administracion — Inventario (solo ADMIN)

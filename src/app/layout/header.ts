@@ -106,11 +106,18 @@ import { CatalogoTile } from '../core/modelos';
                     }
                   </a>
                   <a routerLink="/manacore-panel/usuarios" (click)="menuAdmin.set(false)">👥 Usuarios</a>
+                  <!-- La vista del empleado de envios, para supervisarla -->
+                  <a routerLink="/envios" (click)="menuAdmin.set(false)">🚚 Envíos (vista shipper)</a>
                   <a routerLink="/manacore-panel/configuracion" (click)="menuAdmin.set(false)">⚙ Configuración</a>
                   <a routerLink="/manacore-panel/terminos" (click)="menuAdmin.set(false)">📄 Términos</a>
                 </div>
               }
             </div>
+          }
+          <!-- El empleado de envios (SHIPPER) ve su boton directo a la
+               bandeja de despachos: es SU unica herramienta de trabajo -->
+          @if (auth.sesion()?.rol === 'SHIPPER') {
+            <a routerLink="/envios" class="btn-fantasma btn-chico">🚚 Envíos</a>
           }
           <a routerLink="/cuenta" class="usuario-nombre" title="Mi cuenta">👤 {{ auth.nombre() }}</a>
           <button class="btn-fantasma btn-chico" (click)="salir()">Salir</button>
